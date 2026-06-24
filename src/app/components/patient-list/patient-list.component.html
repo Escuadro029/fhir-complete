@@ -1,0 +1,46 @@
+<div class="page">
+  <div class="page-header">
+    <h1 class="page-title">Patients</h1>
+    <a routerLink="/patients/new" class="btn btn-primary">+ Register patient</a>
+  </div>
+
+  <app-alert *ngIf="alert()" [type]="alert()!.type" [message]="alert()!.message" />
+
+  <div class="card">
+    <div class="toolbar">
+      <div class="search-wrap">
+        <input type="text" [(ngModel)]="searchQuery" (keyup.enter)="search()"
+          placeholder="Search by name or PhilHealth ID…" class="search-input" />
+        <button class="btn btn-outline" (click)="search()">Search</button>
+      </div>
+      <button class="btn btn-ghost" (click)="load()">↺ Refresh</button>
+    </div>
+
+    <div class="loading-row" *ngIf="loading()">
+      <div class="spinner"></div><span>Loading…</span>
+    </div>
+
+    <div class="empty" *ngIf="!loading() && patients().length === 0">
+      <div style="font-size:36px;margin-bottom:10px;">👤</div>
+      <p>No patients found.</p>
+      <a routerLink="/patients/new" class="btn btn-primary" style="margin-top:12px;">Register first patient</a>
+    </div>
+
+    <div class="patient-list" *ngIf="!loading() && patients().length > 0">
+      <div class="patient-row" *ngFor="let p of patients()" (click)="view(p.id!)">
+        <div class="avatar">{{ init(p) }}</div>
+        <div class="pinfo">
+          <div class="pname">{{ name(p) }}</div>
+          <div class="pmeta">PhilHealth: {{ phi(p) }} · {{ p.gender | titlecase }} · {{ p.birthDate }}</div>
+        </div>
+        <span class="badge" [class.badge-active]="p.active !== false" [class.badge-inactive]="p.active === false">
+          {{ p.active !== false ? 'Active' : 'Inactive' }}
+        </span>
+        <div class="row-actions" (click)="$event.stopPropagation()">
+          <button class="icon-btn" title="Edit"   (click)="edit(p.id!)">✏️</button>
+          <button class="icon-btn danger" title="Delete" (click)="delete(p, $event)">🗑️</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

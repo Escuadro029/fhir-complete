@@ -1,0 +1,31 @@
+.page { padding:24px; max-width:900px; margin:0 auto; }
+.page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.back-link { font-size:13px; color:#185FA5; text-decoration:none; }
+.back-link:hover { text-decoration:underline; }
+.loading-center { display:flex; justify-content:center; padding:48px; }
+.spinner { width:28px; height:28px; border:3px solid #dbeafe; border-top-color:#185FA5; border-radius:50%; animation:spin 0.7s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.card { background:#fff; border:1px solid #e5e5e5; border-radius:12px; padding:20px; }
+.card.mt { margin-top:12px; }
+.hero { display:flex; align-items:center; gap:16px; margin-bottom:12px; }
+.avatar-lg { width:52px; height:52px; border-radius:50%; background:#dbeafe; color:#185FA5; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:600; flex-shrink:0; }
+.hero-name { font-size:20px; font-weight:500; margin:0; }
+.id-badge { font-family:monospace; font-size:11px; background:#f3f4f6; border:1px solid #e5e5e5; border-radius:4px; padding:2px 7px; color:#555; }
+.badge { font-size:11px; font-weight:500; padding:3px 9px; border-radius:10px; }
+.badge-active   { background:#dcfce7; color:#16a34a; }
+.badge-inactive { background:#f3f4f6; color:#6b7280; }
+.detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.dtitle { font-size:11px; font-weight:600; color:#185FA5; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:14px; }
+.dfield { display:flex; flex-direction:column; gap:2px; margin-bottom:12px; }
+.dlabel { font-size:10px; font-weight:600; color:#aaa; letter-spacing:0.06em; }
+.dval   { font-size:13px; color:#1a1a1a; }
+.dval.mono  { font-family:monospace; }
+.dval.small { font-size:11px; color:#666; word-break:break-all; }
+.addr-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+.btn { padding:8px 16px; border-radius:8px; font-size:13px; font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-weight:500; transition:all 0.15s; }
+.btn:active { transform:scale(0.98); }
+.btn-outline { background:#fff; color:#444; border:1px solid #ddd; }
+.btn-outline:hover { background:#f5f5f5; }
+.btn-danger { background:#fff; color:#D85A30; border:1px solid rgba(216,90,48,0.3); }
+.btn-danger:hover { background:#fff5f5; }
+@media (max-width:640px) { .detail-grid,.addr-grid { grid-template-columns:1fr; } .page { padding:16px; } }

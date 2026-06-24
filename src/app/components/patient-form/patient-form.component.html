@@ -1,0 +1,232 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <a routerLink="/patients" class="back-link">← Patients</a>
+      <h1 class="page-title">{{ isEditMode() ? 'Edit patient' : 'Register new patient' }}</h1>
+    </div>
+    <span *ngIf="editId()" class="id-badge">ID: {{ editId() }}</span>
+  </div>
+
+  <app-alert *ngIf="alert()" [type]="alert()!.type" [message]="alert()!.message" />
+
+  <!-- ── Patient card ── -->
+  <div class="card" style="position:relative;">
+    <div class="loading-overlay" *ngIf="loading()">
+      <div class="spinner"></div>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+
+      <!-- PhilHealth -->
+      <div class="sdiv">PhilHealth identifier</div>
+      <div class="frow">
+        <div class="fg full">
+          <label>PhilHealth ID <span class="req">*</span></label>
+          <input formControlName="philhealthId" type="text" placeholder="e.g. 63-584789845-5"
+            [class.input-error]="f['philhealthId'].touched && f['philhealthId'].invalid" />
+          <span class="emsg"
+            *ngIf="f['philhealthId'].touched && f['philhealthId'].errors?.['required']">Required.</span>
+        </div>
+      </div>
+
+      <!-- Personal information -->
+      <div class="sdiv">Personal information</div>
+      <div class="frow three">
+        <div class="fg">
+          <label>Family name <span class="req">*</span></label>
+          <input formControlName="familyName" type="text" placeholder="Surname"
+            [class.input-error]="f['familyName'].touched && f['familyName'].invalid" />
+          <span class="emsg" *ngIf="f['familyName'].touched && f['familyName'].errors?.['required']">Required.</span>
+        </div>
+        <div class="fg">
+          <label>Given name <span class="req">*</span></label>
+          <input formControlName="givenName" type="text" placeholder="First name"
+            [class.input-error]="f['givenName'].touched && f['givenName'].invalid" />
+          <span class="emsg" *ngIf="f['givenName'].touched && f['givenName'].errors?.['required']">Required.</span>
+        </div>
+        <div class="fg">
+          <label>Middle name</label>
+          <input formControlName="middleName" type="text" placeholder="Middle name" />
+        </div>
+        <div class="fg">
+          <label>Sex <span class="req">*</span></label>
+          <div class="sw">
+            <select formControlName="gender">
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+              <option value="other">Other</option>
+              <option value="unknown">Unknown</option>
+            </select>
+            <span class="sa">▾</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Date of birth <span class="req">*</span></label>
+          <input formControlName="birthDate" type="date"
+            [class.input-error]="f['birthDate'].touched && f['birthDate'].invalid" />
+          <span class="emsg" *ngIf="f['birthDate'].touched && f['birthDate'].errors?.['required']">Required.</span>
+        </div>
+        <div class="fg">
+          <label>Status</label>
+          <div class="sw">
+            <select formControlName="active">
+              <option [ngValue]="true">Active</option>
+              <option [ngValue]="false">Inactive</option>
+            </select>
+            <span class="sa">▾</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Address -->
+      <div class="sdiv">Address</div>
+      <div class="frow">
+        <div class="fg full">
+          <label>Street / Line 1</label>
+          <input formControlName="line1" type="text" placeholder="House number, street" />
+        </div>
+        <div class="fg full">
+          <label>Line 2</label>
+          <input formControlName="line2" type="text" placeholder="Unit, building, etc." />
+        </div>
+      </div>
+      <div class="frow">
+        <div class="fg">
+          <label>Postal code</label>
+          <input formControlName="postalCode" type="text" placeholder="1100" />
+        </div>
+        <div class="fg">
+          <label>Country</label>
+          <input formControlName="country" type="text" placeholder="PH" />
+        </div>
+      </div>
+
+      <!-- PSGC Location -->
+      <div class="sdiv">Location <span class="sdiv-sub">Live from PSA PSGC API</span></div>
+      <div class="frow two-two">
+
+        <!-- Region -->
+        <div class="fg">
+          <label>Region <span class="loading-dot" *ngIf="loadingR()">…</span></label>
+          <div class="sw">
+            <select (change)="onRegion($any($event.target).value)" [disabled]="loadingR()">
+              <option value="">— Select region —</option>
+              <option *ngFor="let r of regions()" [value]="r.code" [selected]="selRegion === r.code">{{ r.name }}
+              </option>
+            </select>
+            <span class="sa">▾</span>
+          </div>
+        </div>
+
+        <!-- Province -->
+        <div class="fg">
+          <label>Province <span class="loading-dot" *ngIf="loadingP()">…</span></label>
+          <div class="sw">
+            <select (change)="onProv($any($event.target).value)" [disabled]="loadingP() || provs().length === 0">
+              <option value="">— Select province —</option>
+              <option *ngFor="let p of provs()" [value]="p.code" [selected]="selProv === p.code">{{ p.name }}</option>
+            </select>
+            <span class="sa">▾</span>
+          </div>
+        </div>
+
+        <!-- City / Municipality -->
+        <div class="fg">
+          <label>City / Municipality <span class="loading-dot" *ngIf="loadingC()">…</span></label>
+          <div class="sw">
+            <select (change)="onCity($any($event.target).value)" [disabled]="loadingC() || cities().length === 0">
+              <option value="">— Select city / municipality —</option>
+              <option *ngFor="let c of cities()" [value]="c.code" [selected]="selCity === c.code">{{ c.name }}</option>
+            </select>
+            <span class="sa">▾</span>
+          </div>
+        </div>
+
+        <!-- Barangay -->
+        <div class="fg">
+          <label>Barangay <span class="loading-dot" *ngIf="loadingB()">…</span></label>
+          <div class="sw">
+            <select (change)="onBarangay($any($event.target).value)"
+              [disabled]="loadingB() || barangays().length === 0">
+              <option value="">— Select barangay —</option>
+              <option *ngFor="let b of barangays()" [value]="b.code" [selected]="selBrgy === b.code">{{ b.name }}
+              </option>
+            </select>
+            <span class="sa">▾</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Province standalone + auto-filled city -->
+      <div class="frow" style="margin-top:8px;">
+        <div class="fg">
+          <label>Province (all PH) <span class="loading-dot" *ngIf="loadingProvinces()">…</span></label>
+          <div class="sw">
+            <select (change)="onProvinceDropdown($any($event.target).value)" [disabled]="loadingProvinces()">
+              <option value="">— Select province —</option>
+              <option *ngFor="let p of provinces()" [value]="p.name"
+                [selected]="form.get('district')?.value === p.name">{{ p.name }}</option>
+            </select>
+            <span class="sa">▾</span>
+          </div>
+        </div>
+        <div class="fg" *ngIf="form.get('city')?.value">
+          <label>City / Municipality (auto-filled)</label>
+          <input formControlName="city" type="text" readonly class="readonly" />
+        </div>
+      </div>
+
+      <!-- PSGC codes preview -->
+      <div class="psgc-preview" *ngIf="selProv || selCity || selBrgy">
+        <span class="psgc-preview-label">PSGC codes:</span>
+        <span class="psgc-chip" *ngIf="selProv">{{ selProv }}</span>
+        <span class="psgc-sep" *ngIf="selProv && selCity">›</span>
+        <span class="psgc-chip" *ngIf="selCity">{{ selCity }}</span>
+        <span class="psgc-sep" *ngIf="selCity && selBrgy">›</span>
+        <span class="psgc-chip" *ngIf="selBrgy">{{ selBrgy }}</span>
+      </div>
+
+      <!-- Actions -->
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" (click)="toggleJson()">
+          {{ showJson() ? 'Hide JSON' : 'Preview FHIR JSON' }}
+        </button>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-outline" (click)="resetForm()">Clear</button>
+          <button type="submit" class="btn btn-primary" [disabled]="loading()">
+            <span class="spin-sm" *ngIf="loading()"></span>
+            {{ isEditMode() ? 'Save changes' : 'Register patient' }}
+          </button>
+        </div>
+      </div>
+
+    </form>
+
+    <div class="json-preview" *ngIf="showJson()">
+      <pre>{{ jsonPreview }}</pre>
+    </div>
+  </div>
+
+  <!-- ── Clinical tabs (shown after patient saved) ── -->
+  <div *ngIf="patientSaved()" style="margin-top:24px;">
+    <div class="tab-bar">
+      <button class="tab-btn" [class.active]="activeTab() === 'condition'" (click)="activeTab.set('condition')">
+        🩺 Condition
+      </button>
+      <button class="tab-btn" [class.active]="activeTab() === 'service-request'"
+        (click)="activeTab.set('service-request')">
+        📋 Service Request
+      </button>
+    </div>
+
+    <app-condition-form *ngIf="activeTab() === 'condition'" [patientId]="savedPatientId()!" />
+    <app-service-request-form *ngIf="activeTab() === 'service-request'" [patientId]="savedPatientId()!" />
+  </div>
+
+  <!-- Prompt to save patient first -->
+  <div *ngIf="!patientSaved()" class="save-prompt">
+    💡 Register the patient above to unlock the Condition and Service Request forms.
+  </div>
+
+</div>

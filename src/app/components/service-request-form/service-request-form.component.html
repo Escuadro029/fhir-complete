@@ -1,0 +1,150 @@
+<div class="stepper-card">
+  <div class="step-track">
+    <ng-container *ngFor="let step of steps; let i=index">
+      <div class="step-item" [class.active]="currentStep()===i" [class.done]="isStepDone(i)" (click)="goToStep(i)">
+        <div class="step-bubble"><span *ngIf="isStepDone(i)">✓</span><span *ngIf="!isStepDone(i)">{{i+1}}</span></div>
+        <div class="step-meta"><span class="step-label">{{step.label}}</span><span class="step-desc">{{step.description}}</span></div>
+      </div>
+      <div class="step-line" *ngIf="i<steps.length-1" [class.line-done]="isStepDone(i)"></div>
+    </ng-container>
+  </div>
+
+  <app-alert *ngIf="alert()" [type]="alert()!.type" [message]="alert()!.message" />
+
+  <div class="step-body">
+    <div class="loading-overlay" *ngIf="loading()"><div class="spinner"></div></div>
+    <form [formGroup]="form" novalidate>
+
+      <!-- Step 0 -->
+      <div *ngIf="currentStep()===0">
+        <div class="step-heading">Request details</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Requisition number</label>
+            <div class="input-prefix-wrapper"><span class="input-prefix">REF-</span><input formControlName="requisitionValue" type="text" placeholder="2026-001234" /></div>
+          </div>
+        </div>
+        <div class="form-row three">
+          <div class="form-group">
+            <label>Status <span class="required">*</span></label>
+            <div class="select-wrapper"><select formControlName="status"><option *ngFor="let o of statusOptions" [value]="o.code">{{o.display}}</option></select><span class="select-arrow">▾</span></div>
+          </div>
+          <div class="form-group">
+            <label>Intent <span class="required">*</span></label>
+            <div class="select-wrapper"><select formControlName="intent"><option *ngFor="let o of intentOptions" [value]="o.code">{{o.display}}</option></select><span class="select-arrow">▾</span></div>
+          </div>
+          <div class="form-group">
+            <label>Category <span class="required">*</span></label>
+            <div class="select-wrapper"><select formControlName="categoryCode" (change)="onCategoryChange($any($event.target).value)"><option *ngFor="let o of categoryOptions" [value]="o.code">{{o.text}}</option></select><span class="select-arrow">▾</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 1 -->
+      <div *ngIf="currentStep()===1">
+        <div class="step-heading">References &amp; dates</div>
+        <div class="form-row three">
+          <div class="form-group">
+            <label>Patient ID <span class="required">*</span></label>
+            <div class="input-prefix-wrapper" [class.error-wrap]="f['patientReference'].touched&&f['patientReference'].invalid">
+              <span class="input-prefix">Patient/</span><input formControlName="patientReference" type="text" placeholder="16468" />
+            </div>
+            <span class="error-msg" *ngIf="f['patientReference'].touched&&f['patientReference'].errors?.['required']">Required.</span>
+          </div>
+          <div class="form-group">
+            <label>Requester (Practitioner ID) <span class="required">*</span></label>
+            <div class="input-prefix-wrapper" [class.error-wrap]="f['requesterReference'].touched&&f['requesterReference'].invalid">
+              <span class="input-prefix">Practitioner/</span><input formControlName="requesterReference" type="text" placeholder="16171" />
+            </div>
+            <span class="error-msg" *ngIf="f['requesterReference'].touched&&f['requesterReference'].errors?.['required']">Required.</span>
+          </div>
+          <div class="form-group">
+            <label>Performer (Practitioner ID)</label>
+            <div class="input-prefix-wrapper"><span class="input-prefix">Practitioner/</span><input formControlName="performerReference" type="text" placeholder="18117" /></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Occurrence date &amp; time <span class="required">*</span></label>
+            <input formControlName="occurrenceDateTime" type="datetime-local" [class.input-error]="f['occurrenceDateTime'].touched&&f['occurrenceDateTime'].invalid" />
+            <span class="error-msg" *ngIf="f['occurrenceDateTime'].touched&&f['occurrenceDateTime'].errors?.['required']">Required.</span>
+          </div>
+          <div class="form-group">
+            <label>Authored on</label>
+            <input formControlName="authoredOn" type="datetime-local" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div *ngIf="currentStep()===2">
+        <div class="step-heading">Reason &amp; clinical note</div>
+        <div class="form-row">
+          <div class="form-group"><label>Reason code (SNOMED)</label><input formControlName="reasonCode" type="text" placeholder="e.g. 71388002" /></div>
+          <div class="form-group"><label>Reason display</label><input formControlName="reasonDisplay" type="text" placeholder="e.g. Procedure" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Reason text <span class="required">*</span></label>
+            <textarea formControlName="reasonText" rows="3" placeholder="e.g. Severe pre-eclampsia requiring IV antihypertensive…" [class.input-error]="f['reasonText'].touched&&f['reasonText'].invalid"></textarea>
+            <span class="error-msg" *ngIf="f['reasonText'].touched&&f['reasonText'].errors?.['required']">Required.</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Clinical note</label>
+            <textarea formControlName="noteText" rows="4" placeholder="Patient history, vitals, clinical context…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 Review -->
+      <div *ngIf="currentStep()===3">
+        <div class="step-heading">Review &amp; confirm</div>
+        <div class="review-grid">
+          <div class="review-section">
+            <div class="review-title">Request</div>
+            <div class="review-row" *ngIf="f['requisitionValue'].value"><span class="review-label">Requisition</span><code class="review-code">REF-{{f['requisitionValue'].value}}</code></div>
+            <div class="review-row"><span class="review-label">Status</span><span class="pill pill-status">{{labelFor('status',statusOptions)}}</span></div>
+            <div class="review-row"><span class="review-label">Intent</span><span class="review-value">{{labelFor('intent',intentOptions)}}</span></div>
+            <div class="review-row"><span class="review-label">Category</span><span class="review-value">{{f['categoryText'].value}}</span></div>
+          </div>
+          <div class="review-section">
+            <div class="review-title">References</div>
+            <div class="review-row"><span class="review-label">Patient</span><code class="review-code">Patient/{{f['patientReference'].value}}</code></div>
+            <div class="review-row"><span class="review-label">Requester</span><code class="review-code">Practitioner/{{f['requesterReference'].value}}</code></div>
+            <div class="review-row" *ngIf="f['performerReference'].value"><span class="review-label">Performer</span><code class="review-code">Practitioner/{{f['performerReference'].value}}</code></div>
+            <div class="review-row"><span class="review-label">Occurrence</span><span class="review-value">{{f['occurrenceDateTime'].value | date:'medium'}}</span></div>
+          </div>
+          <div class="review-section full">
+            <div class="review-title">Reason</div>
+            <div class="review-row" *ngIf="f['reasonCode'].value"><span class="review-label">Code</span><code class="review-code">{{f['reasonCode'].value}}</code></div>
+            <div class="review-note">{{f['reasonText'].value}}</div>
+          </div>
+          <div class="review-section full" *ngIf="f['noteText'].value">
+            <div class="review-title">Clinical note</div>
+            <div class="review-note">{{f['noteText'].value}}</div>
+          </div>
+        </div>
+        <div class="success-banner" *ngIf="savedId()">
+          <span class="success-check">✓</span>
+          <div><div class="success-title">Service request saved</div><div class="success-sub">FHIR ID: <code>{{savedId()}}</code></div></div>
+          <button class="btn btn-outline" (click)="resetForm()">New request</button>
+        </div>
+        <div class="json-row"><button type="button" class="btn btn-ghost" (click)="toggleJson()">{{showJson()?'Hide FHIR JSON':'Preview FHIR JSON'}}</button></div>
+        <div class="json-preview" *ngIf="showJson()"><pre>{{jsonPreview}}</pre></div>
+      </div>
+
+    </form>
+  </div>
+
+  <div class="step-nav">
+    <button class="btn btn-outline" (click)="back()" [disabled]="currentStep()===0">← Back</button>
+    <span class="step-counter">{{currentStep()+1}} / {{steps.length}}</span>
+    <button *ngIf="currentStep()<steps.length-1" class="btn btn-primary" (click)="next()">Next →</button>
+    <button *ngIf="currentStep()===steps.length-1" class="btn btn-success" (click)="submit()" [disabled]="loading()||!!savedId()">
+      <span class="spinner-sm" *ngIf="loading()"></span>
+      {{isEditMode()?'Save changes':'Submit request'}}
+    </button>
+  </div>
+</div>

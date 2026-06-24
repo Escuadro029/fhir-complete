@@ -1,0 +1,52 @@
+<div class="page">
+  <div class="page-header">
+    <a routerLink="/patients" class="back-link">← Patients</a>
+    <div *ngIf="patient()" style="display:flex;gap:8px;">
+      <button class="btn btn-outline" (click)="edit()">✏️ Edit</button>
+      <button class="btn btn-danger"  (click)="delete()">🗑️ Delete</button>
+    </div>
+  </div>
+
+  <app-alert *ngIf="alert()" [type]="alert()!.type" [message]="alert()!.message" />
+  <div class="loading-center" *ngIf="loading()"><div class="spinner"></div></div>
+
+  <ng-container *ngIf="!loading() && patient() as p">
+    <div class="hero card">
+      <div class="avatar-lg">{{ initials() }}</div>
+      <div>
+        <h2 class="hero-name">{{ name() }}</h2>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+          <span class="id-badge">{{ p.id }}</span>
+          <span class="badge" [class.badge-active]="p.active!==false" [class.badge-inactive]="p.active===false">{{ p.active!==false?'Active':'Inactive' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="card">
+        <div class="dtitle">PhilHealth identifier</div>
+        <div class="dfield"><span class="dlabel">PHILHEALTH ID</span><span class="dval mono">{{ phi() }}</span></div>
+        <div class="dfield"><span class="dlabel">SYSTEM</span><span class="dval small">{{ p.identifier?.[0]?.system }}</span></div>
+      </div>
+      <div class="card">
+        <div class="dtitle">Demographics</div>
+        <div class="dfield"><span class="dlabel">SEX</span><span class="dval">{{ p.gender | titlecase }}</span></div>
+        <div class="dfield"><span class="dlabel">DATE OF BIRTH</span><span class="dval">{{ p.birthDate }}</span></div>
+      </div>
+    </div>
+
+    <div class="card mt">
+      <div class="dtitle">Address</div>
+      <div class="addr-grid">
+        <div class="dfield"><span class="dlabel">STREET</span><span class="dval">{{ p.address?.[0]?.line?.join(', ')||'—' }}</span></div>
+        <div class="dfield"><span class="dlabel">CITY</span><span class="dval">{{ p.address?.[0]?.city||'—' }}</span></div>
+        <div class="dfield"><span class="dlabel">DISTRICT</span><span class="dval">{{ p.address?.[0]?.district||'—' }}</span></div>
+        <div class="dfield"><span class="dlabel">POSTAL</span><span class="dval">{{ p.address?.[0]?.postalCode||'—' }}</span></div>
+        <div class="dfield"><span class="dlabel">BARANGAY</span><span class="dval">{{ ext('barangay') }}</span></div>
+        <div class="dfield"><span class="dlabel">CITY/MUN.</span><span class="dval">{{ ext('city-municipality') }}</span></div>
+        <div class="dfield"><span class="dlabel">PROVINCE</span><span class="dval">{{ ext('province') }}</span></div>
+        <div class="dfield"><span class="dlabel">COUNTRY</span><span class="dval">{{ p.address?.[0]?.country||'—' }}</span></div>
+      </div>
+    </div>
+  </ng-container>
+</div>

@@ -1,0 +1,162 @@
+<div class="stepper-card">
+  <div class="step-track">
+    <ng-container *ngFor="let step of steps; let i=index">
+      <div class="step-item" [class.active]="currentStep()===i" [class.done]="isStepDone(i)" (click)="goToStep(i)">
+        <div class="step-bubble"><span *ngIf="isStepDone(i)">✓</span><span *ngIf="!isStepDone(i)">{{i+1}}</span></div>
+        <div class="step-meta"><span class="step-label">{{step.label}}</span><span class="step-desc">{{step.description}}</span></div>
+      </div>
+      <div class="step-line" *ngIf="i<steps.length-1" [class.line-done]="isStepDone(i)"></div>
+    </ng-container>
+  </div>
+
+  <app-alert *ngIf="alert()" [type]="alert()!.type" [message]="alert()!.message" />
+
+  <div class="step-body">
+    <div class="loading-overlay" *ngIf="loading()"><div class="spinner"></div></div>
+    <form [formGroup]="form" novalidate>
+
+      <!-- Step 0 -->
+      <div *ngIf="currentStep()===0">
+        <div class="step-heading">Clinical status</div>
+        <div class="form-row three">
+          <div class="form-group">
+            <label>Clinical status <span class="required">*</span></label>
+            <div class="select-wrapper"><select formControlName="clinicalStatusCode"><option *ngFor="let o of clinicalStatusOptions" [value]="o.code">{{o.display}}</option></select><span class="select-arrow">▾</span></div>
+          </div>
+          <div class="form-group">
+            <label>Verification status <span class="required">*</span></label>
+            <div class="select-wrapper"><select formControlName="verificationStatusCode"><option *ngFor="let o of verificationStatusOptions" [value]="o.code">{{o.display}}</option></select><span class="select-arrow">▾</span></div>
+          </div>
+          <div class="form-group">
+            <label>Category <span class="required">*</span></label>
+            <div class="select-wrapper"><select formControlName="categoryCode"><option *ngFor="let o of categoryOptions" [value]="o.code">{{o.display}}</option></select><span class="select-arrow">▾</span></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Category text</label><input formControlName="categoryText" type="text" placeholder="e.g. Acute Diagnosis" /></div>
+        </div>
+      </div>
+
+      <!-- Step 1 -->
+      <div *ngIf="currentStep()===1">
+        <div class="step-heading">Condition code</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Code <span class="required">*</span></label>
+            <input formControlName="conditionCode" type="text" placeholder="e.g. 401303003" [class.input-error]="f['conditionCode'].touched&&f['conditionCode'].invalid" />
+            <span class="error-msg" *ngIf="f['conditionCode'].touched&&f['conditionCode'].errors?.['required']">Required.</span>
+          </div>
+          <div class="form-group">
+            <label>Coding system</label>
+            <div class="select-wrapper"><select formControlName="conditionSystem">
+              <option value="http://snomed.info/sct">SNOMED CT</option>
+              <option value="http://hl7.org/fhir/sid/icd-10">ICD-10</option>
+              <option value="http://hl7.org/fhir/sid/icd-10-cm">ICD-10-CM</option>
+            </select><span class="select-arrow">▾</span></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Code display <span class="required">*</span></label>
+            <input formControlName="conditionDisplay" type="text" placeholder="e.g. Acute ST segment elevation myocardial infarction" [class.input-error]="f['conditionDisplay'].touched&&f['conditionDisplay'].invalid" />
+            <span class="error-msg" *ngIf="f['conditionDisplay'].touched&&f['conditionDisplay'].errors?.['required']">Required.</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Condition text <span class="required">*</span></label>
+            <input formControlName="conditionText" type="text" placeholder="e.g. Acute Coronary Syndrome - STEMI" [class.input-error]="f['conditionText'].touched&&f['conditionText'].invalid" />
+            <span class="error-msg" *ngIf="f['conditionText'].touched&&f['conditionText'].errors?.['required']">Required.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div *ngIf="currentStep()===2">
+        <div class="step-heading">References &amp; dates</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Patient ID <span class="required">*</span></label>
+            <div class="input-prefix-wrapper" [class.error-wrap]="f['patientReference'].touched&&f['patientReference'].invalid">
+              <span class="input-prefix">Patient/</span><input formControlName="patientReference" type="text" placeholder="16468" />
+            </div>
+            <span class="error-msg" *ngIf="f['patientReference'].touched&&f['patientReference'].errors?.['required']">Required.</span>
+          </div>
+          <div class="form-group">
+            <label>Recorder (Practitioner ID)</label>
+            <div class="input-prefix-wrapper"><span class="input-prefix">Practitioner/</span><input formControlName="recorderReference" type="text" placeholder="16171" /></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Onset date &amp; time <span class="required">*</span></label>
+            <input formControlName="onsetDateTime" type="datetime-local" [class.input-error]="f['onsetDateTime'].touched&&f['onsetDateTime'].invalid" />
+            <span class="error-msg" *ngIf="f['onsetDateTime'].touched&&f['onsetDateTime'].errors?.['required']">Required.</span>
+          </div>
+          <div class="form-group">
+            <label>Recorded date &amp; time</label>
+            <input formControlName="recordedDate" type="datetime-local" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div *ngIf="currentStep()===3">
+        <div class="step-heading">Clinical note</div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Note</label>
+            <textarea formControlName="noteText" rows="6" placeholder="Clinical observations, ECG findings, lab values…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4 Review -->
+      <div *ngIf="currentStep()===4">
+        <div class="step-heading">Review &amp; confirm</div>
+        <div class="review-grid">
+          <div class="review-section">
+            <div class="review-title">Status</div>
+            <div class="review-row"><span class="review-label">Clinical</span><span class="pill pill-active">{{labelFor('clinicalStatusCode',clinicalStatusOptions)}}</span></div>
+            <div class="review-row"><span class="review-label">Verification</span><span class="pill pill-confirm">{{labelFor('verificationStatusCode',verificationStatusOptions)}}</span></div>
+            <div class="review-row"><span class="review-label">Category</span><span class="review-value">{{labelFor('categoryCode',categoryOptions)}}</span></div>
+          </div>
+          <div class="review-section">
+            <div class="review-title">Condition code</div>
+            <div class="review-row"><span class="review-label">Code</span><code class="review-code">{{f['conditionCode'].value}}</code></div>
+            <div class="review-row"><span class="review-label">Display</span><span class="review-value">{{f['conditionDisplay'].value}}</span></div>
+            <div class="review-row"><span class="review-label">Text</span><span class="review-value">{{f['conditionText'].value}}</span></div>
+          </div>
+          <div class="review-section">
+            <div class="review-title">References</div>
+            <div class="review-row"><span class="review-label">Patient</span><code class="review-code">Patient/{{f['patientReference'].value}}</code></div>
+            <div class="review-row" *ngIf="f['recorderReference'].value"><span class="review-label">Recorder</span><code class="review-code">Practitioner/{{f['recorderReference'].value}}</code></div>
+            <div class="review-row"><span class="review-label">Onset</span><span class="review-value">{{f['onsetDateTime'].value | date:'medium'}}</span></div>
+          </div>
+          <div class="review-section full" *ngIf="f['noteText'].value">
+            <div class="review-title">Note</div>
+            <div class="review-note">{{f['noteText'].value}}</div>
+          </div>
+        </div>
+        <div class="success-banner" *ngIf="savedId()">
+          <span class="success-check">✓</span>
+          <div><div class="success-title">Condition recorded</div><div class="success-sub">FHIR ID: <code>{{savedId()}}</code></div></div>
+          <button class="btn btn-outline" (click)="resetForm()">Record another</button>
+        </div>
+        <div class="json-row"><button type="button" class="btn btn-ghost" (click)="toggleJson()">{{showJson()?'Hide FHIR JSON':'Preview FHIR JSON'}}</button></div>
+        <div class="json-preview" *ngIf="showJson()"><pre>{{jsonPreview}}</pre></div>
+      </div>
+
+    </form>
+  </div>
+
+  <div class="step-nav">
+    <button class="btn btn-outline" (click)="back()" [disabled]="currentStep()===0">← Back</button>
+    <span class="step-counter">{{currentStep()+1}} / {{steps.length}}</span>
+    <button *ngIf="currentStep()<steps.length-1" class="btn btn-primary" (click)="next()">Next →</button>
+    <button *ngIf="currentStep()===steps.length-1" class="btn btn-success" (click)="submit()" [disabled]="loading()||!!savedId()">
+      <span class="spinner-sm" *ngIf="loading()"></span>
+      {{isEditMode()?'Save changes':'Record condition'}}
+    </button>
+  </div>
+</div>
