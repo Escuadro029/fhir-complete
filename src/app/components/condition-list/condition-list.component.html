@@ -1,0 +1,94 @@
+<div class="cl-wrapper">
+
+  <!-- Header -->
+  <div class="cl-header">
+    <div class="cl-title">
+      <span class="cl-icon">🩺</span>
+      Conditions
+      <span class="cl-count" *ngIf="conditions().length > 0">{{ conditions().length }}</span>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost" (click)="load()">↺ Refresh</button>
+      <button class="btn btn-primary" (click)="openNew()">+ Add condition</button>
+    </div>
+  </div>
+
+  <app-alert *ngIf="alert()" [type]="alert()!.type" [message]="alert()!.message" />
+
+  <!-- Inline form (add / edit) -->
+  <div class="cl-form-wrap" *ngIf="showForm()">
+    <div class="cl-form-header">
+      <span>{{ editId() ? 'Edit condition' : 'New condition' }}</span>
+      <button class="btn btn-ghost" (click)="closeForm()">✕ Close</button>
+    </div>
+    <app-condition-form
+      [patientId]="patientId"
+      [conditionId]="editId() ?? ''"
+    />
+  </div>
+
+  <!-- Loading -->
+  <div class="cl-loading" *ngIf="loading()">
+    <div class="spinner"></div>
+    <span>Loading conditions…</span>
+  </div>
+
+  <!-- Empty -->
+  <div class="cl-empty" *ngIf="!loading() && conditions().length === 0 && !showForm()">
+    <div class="cl-empty-icon">📋</div>
+    <p>No conditions recorded for this patient.</p>
+    <button class="btn btn-primary" (click)="openNew()">Record first condition</button>
+  </div>
+
+  <!-- Condition cards -->
+  <div class="cl-list" *ngIf="!loading() && conditions().length > 0">
+    <div class="cl-card" *ngFor="let c of conditions()">
+
+      <div class="cl-card-top">
+        <div class="cl-card-left">
+          <div class="cl-code-badge">{{ c.code?.coding?.[0]?.code ?? '—' }}</div>
+          <div>
+            <div class="cl-condition-name">{{ c.code?.text }}</div>
+            <div class="cl-condition-display">{{ c.code?.coding?.[0]?.display }}</div>
+          </div>
+        </div>
+        <div class="cl-card-actions">
+          <span class="pill {{ statusColor(c.clinicalStatus?.coding?.[0]?.code ?? '') }}">
+            {{ c.clinicalStatus?.coding?.[0]?.display }}
+          </span>
+          <span class="pill pill-verify">
+            {{ c.verificationStatus?.coding?.[0]?.display }}
+          </span>
+          <button class="icon-btn" title="Edit" (click)="openEdit(c.id!)">✏️</button>
+          <button class="icon-btn danger" title="Delete" (click)="delete(c)">🗑️</button>
+        </div>
+      </div>
+
+      <div class="cl-card-meta">
+        <div class="cl-meta-item" *ngIf="c.onsetDateTime">
+          <span class="cl-meta-label">Onset</span>
+          <span class="cl-meta-value">{{ c.onsetDateTime | date:'mediumDate' }}</span>
+        </div>
+        <div class="cl-meta-item" *ngIf="c.recordedDate">
+          <span class="cl-meta-label">Recorded</span>
+          <span class="cl-meta-value">{{ c.recordedDate | date:'mediumDate' }}</span>
+        </div>
+        <div class="cl-meta-item" *ngIf="c.recorder?.reference">
+          <span class="cl-meta-label">Recorder</span>
+          <span class="cl-meta-value">{{ c.recorder?.reference }}</span>
+        </div>
+        <div class="cl-meta-item">
+          <span class="cl-meta-label">Category</span>
+          <span class="cl-meta-value">{{ c.category?.[0]?.text }}</span>
+        </div>
+      </div>
+
+      <div class="cl-note" *ngIf="c.note?.[0]?.text">
+        <span class="cl-note-label">Note</span>
+        <p class="cl-note-text">{{ c.note[0].text }}</p>
+      </div>
+
+    </div>
+  </div>
+
+</div>

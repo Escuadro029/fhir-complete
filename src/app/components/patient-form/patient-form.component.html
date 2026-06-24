@@ -209,21 +209,25 @@
   </div>
 
   <!-- ── Clinical tabs (shown after patient saved) ── -->
-  <div *ngIf="patientSaved()" style="margin-top:24px;">
-    <div class="tab-bar">
-      <button class="tab-btn" [class.active]="activeTab() === 'condition'" (click)="activeTab.set('condition')">
-        🩺 Condition
-      </button>
-      <button class="tab-btn" [class.active]="activeTab() === 'service-request'"
-        (click)="activeTab.set('service-request')">
-        📋 Service Request
-      </button>
-    </div>
+<div class="tab-bar">
+  <button class="tab-btn"
+    [class.active]="activeTab() === 'condition'"
+    (click)="activeTab.set('condition')">🩺 Condition</button>
+  <button class="tab-btn"
+    [class.active]="activeTab() === 'service-request'"
+    (click)="activeTab.set('service-request')">📋 Service Request</button>
+</div>
 
-    <app-condition-form *ngIf="activeTab() === 'condition'" [patientId]="savedPatientId()!" />
-    <app-service-request-form *ngIf="activeTab() === 'service-request'" [patientId]="savedPatientId()!" />
-  </div>
+<!-- Condition list (shows saved conditions + inline add/edit form) -->
+<app-condition-list
+  *ngIf="activeTab() === 'condition'"
+  [patientId]="savedPatientId()!"
+/>
 
+<app-service-request-form
+  *ngIf="activeTab() === 'service-request'"
+  [patientId]="savedPatientId()!"
+/>
   <!-- Prompt to save patient first -->
   <div *ngIf="!patientSaved()" class="save-prompt">
     💡 Register the patient above to unlock the Condition and Service Request forms.

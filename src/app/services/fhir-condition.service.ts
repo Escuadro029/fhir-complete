@@ -41,8 +41,10 @@ export class FhirConditionService {
       category: [{ coding: [{ system: CAT_SYS, code: f.categoryCode, display: CATEGORY_OPTIONS.find(o => o.code === f.categoryCode)?.display ?? '' }], text: f.categoryText }],
       code:     { coding: [{ system: f.conditionSystem, code: f.conditionCode, display: f.conditionDisplay }], text: f.conditionText },
       subject:      { reference: `Patient/${f.patientReference}` },
-      onsetDateTime: f.onsetDateTime,
-      recordedDate:  f.recordedDate,
+      // onsetDateTime: f.onsetDateTime,
+      // recordedDate:  f.recordedDate,
+      onsetDateTime: f.onsetDateTime ? f.onsetDateTime + ':00+08:00' : '',
+recordedDate:  f.recordedDate  ? f.recordedDate  + ':00+08:00' : '',
       recorder:     { reference: `Practitioner/${f.recorderReference}` },
       note: f.noteText ? [{ text: f.noteText }] : []
     };
