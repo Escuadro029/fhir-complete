@@ -228,6 +228,11 @@
   *ngIf="activeTab() === 'service-request'"
   [patientId]="savedPatientId()!"
 />
+
+<app-service-request-list
+  *ngIf="activeTab() === 'service-request'"
+  [patientId]="savedPatientId()!"
+/>
   <!-- Prompt to save patient first -->
   <div *ngIf="!patientSaved()" class="save-prompt">
     💡 Register the patient above to unlock the Condition and Service Request forms.

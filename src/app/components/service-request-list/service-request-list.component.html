@@ -1,0 +1,105 @@
+<div class="sl-wrapper">
+
+  <!-- Header -->
+  <div class="sl-header">
+    <div class="sl-title">
+      <span class="sl-icon">📋</span>
+      Service Requests
+      <span class="sl-count" *ngIf="requests().length > 0">{{ requests().length }}</span>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost" (click)="load()">↺ Refresh</button>
+      <button class="btn btn-primary" (click)="openNew()">+ New request</button>
+    </div>
+  </div>
+
+  <app-alert *ngIf="alert()" [type]="alert()!.type" [message]="alert()!.message" />
+
+  <!-- Inline form -->
+  <div class="sl-form-wrap" *ngIf="showForm()">
+    <div class="sl-form-header">
+      <span>{{ editId() ? 'Edit service request' : 'New service request' }}</span>
+      <button class="btn btn-ghost" (click)="closeForm()">✕ Close</button>
+    </div>
+    <app-service-request-form
+      [patientId]="patientId"
+      [serviceRequestId]="editId() ?? ''"
+    />
+  </div>
+
+  <!-- Loading -->
+  <div class="sl-loading" *ngIf="loading()">
+    <div class="spinner"></div>
+    <span>Loading service requests…</span>
+  </div>
+
+  <!-- Empty -->
+  <div class="sl-empty" *ngIf="!loading() && requests().length === 0 && !showForm()">
+    <div class="sl-empty-icon">📄</div>
+    <p>No service requests for this patient.</p>
+    <button class="btn btn-primary" (click)="openNew()">Create first request</button>
+  </div>
+
+  <!-- Request cards -->
+  <div class="sl-list" *ngIf="!loading() && requests().length > 0">
+    <div class="sl-card" *ngFor="let sr of requests()">
+
+      <!-- Card top -->
+      <div class="sl-card-top">
+        <div class="sl-card-left">
+          <div class="sl-ref-badge">
+            {{ sr.requisition?.value ?? 'No REF' }}
+          </div>
+          <div>
+            <div class="sl-category">{{ sr.category?.[0]?.text }}</div>
+            <div class="sl-subject">{{ sr.subject?.reference }}</div>
+          </div>
+        </div>
+        <div class="sl-card-actions">
+          <span class="pill {{ statusColor(sr.status) }}">{{ sr.status | titlecase }}</span>
+          <span class="pill pill-intent">{{ sr.intent | titlecase }}</span>
+          <button class="icon-btn" title="Edit"   (click)="openEdit(sr.id!)">✏️</button>
+          <button class="icon-btn danger" title="Delete" (click)="delete(sr)">🗑️</button>
+        </div>
+      </div>
+
+      <!-- Meta row -->
+      <div class="sl-meta">
+        <div class="sl-meta-item" *ngIf="sr.occurrenceDateTime">
+          <span class="sl-meta-label">Occurrence</span>
+          <span class="sl-meta-value">{{ sr.occurrenceDateTime | date:'medium' }}</span>
+        </div>
+        <div class="sl-meta-item" *ngIf="sr.authoredOn">
+          <span class="sl-meta-label">Authored</span>
+          <span class="sl-meta-value">{{ sr.authoredOn | date:'medium' }}</span>
+        </div>
+        <div class="sl-meta-item" *ngIf="sr.requester?.reference">
+          <span class="sl-meta-label">Requester</span>
+          <span class="sl-meta-value">{{ sr.requester?.reference }}</span>
+        </div>
+        <div class="sl-meta-item" *ngIf="sr.performer?.[0]?.reference">
+          <span class="sl-meta-label">Performer</span>
+          <span class="sl-meta-value">{{ sr.performer[0].reference }}</span>
+        </div>
+        <!-- <div class="sl-meta-item" *ngIf="sr.encounter?.reference">
+          <span class="sl-meta-label">Encounter</span>
+          <span class="sl-meta-value">{{ sr.encounter?.reference }}</span>
+        </div> -->
+      </div>
+
+      <!-- Reason -->
+      <div class="sl-reason" *ngIf="sr.reasonCode?.[0]?.text">
+        <span class="sl-reason-label">Reason</span>
+        <p class="sl-reason-text">{{ sr.reasonCode[0].text }}</p>
+      </div>
+
+      <!-- Note -->
+      <div class="sl-note" *ngIf="sr.note?.[0]?.text">
+        <span class="sl-note-label">Note</span>
+        <p class="sl-note-text">{{ sr.note[0].text }}</p>
+      </div>
+
+    </div>
+  </div>
+
+</div>

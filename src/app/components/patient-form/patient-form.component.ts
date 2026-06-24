@@ -9,11 +9,12 @@ import { AlertComponent } from '../shared/alert.component';
 import { ConditionFormComponent } from '../condition-form/condition-form.component';
 import { ServiceRequestFormComponent } from '../service-request-form/service-request-form.component';
 import { ConditionListComponent } from '../condition-list/condition-list.component';
+import { ServiceRequestListComponent } from '../service-request-list/service-request-list.component';
 
 @Component({
   selector: 'app-patient-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, AlertComponent, ConditionFormComponent, ServiceRequestFormComponent, FormsModule, ConditionListComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, AlertComponent, ConditionFormComponent, ServiceRequestFormComponent, FormsModule, ConditionListComponent, ServiceRequestListComponent],
   templateUrl: './patient-form.component.html',
   styleUrls: ['./patient-form.component.css']
 })
