@@ -1,0 +1,235 @@
+<div class="tl-wrapper">
+
+  <!-- Header -->
+  <div class="tl-header">
+    <div class="tl-title">
+      📋 Tasks
+      <span class="tl-count" *ngIf="tasks().length > 0">{{ tasks().length }}</span>
+    </div>
+    <div class="tl-header-actions">
+      <button class="btn btn-ghost" (click)="load()">↺ Refresh</button>
+      <button class="btn btn-primary" (click)="openNew()">+ New task</button>
+    </div>
+  </div>
+
+  <app-alert *ngIf="alert()" [type]="alert()!.type" [message]="alert()!.message" />
+
+  <!-- Inline form -->
+  <div class="tl-form-wrap" *ngIf="showForm()">
+    <div class="tl-form-header">
+      <span>{{ editId() ? 'Edit task' : 'New task' }}</span>
+      <button class="btn btn-ghost" (click)="closeForm()">✕ Close</button>
+    </div>
+
+    <div class="tl-form-body">
+      <form [formGroup]="form" novalidate>
+
+        <!-- Status & intent -->
+        <div class="f-section">Task details</div>
+        <div class="f-row three">
+          <div class="f-group">
+            <label>Status <span class="req">*</span></label>
+            <div class="sw">
+              <select formControlName="status">
+                <option *ngFor="let o of statusOptions" [value]="o.code">{{ o.display }}</option>
+              </select>
+              <span class="sa">▾</span>
+            </div>
+          </div>
+          <div class="f-group">
+            <label>Intent <span class="req">*</span></label>
+            <div class="sw">
+              <select formControlName="intent">
+                <option *ngFor="let o of intentOptions" [value]="o.code">{{ o.display }}</option>
+              </select>
+              <span class="sa">▾</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Code -->
+        <div class="f-row">
+          <div class="f-group">
+            <label>Code (SNOMED)</label>
+            <input formControlName="codeCode" type="text" placeholder="e.g. 3457005" />
+          </div>
+          <div class="f-group">
+            <label>Code display</label>
+            <input formControlName="codeDisplay" type="text" placeholder="e.g. Patient referral" />
+          </div>
+        </div>
+        <div class="f-row">
+          <div class="f-group full">
+            <label>Code text <span class="req">*</span></label>
+            <input formControlName="codeText" type="text"
+              placeholder="e.g. eReferral for severe pre-eclampsia management"
+              [class.input-error]="f['codeText'].touched && f['codeText'].invalid" />
+            <span class="emsg" *ngIf="f['codeText'].touched && f['codeText'].errors?.['required']">Required.</span>
+          </div>
+        </div>
+
+        <!-- References -->
+        <div class="f-section">References</div>
+        <div class="f-row three">
+          <div class="f-group">
+            <label>Focus (ServiceRequest) <span class="req">*</span></label>
+            <div class="ipw" [class.error-wrap]="f['focusReference'].touched && f['focusReference'].invalid">
+              <span class="ip">ServiceRequest/</span>
+              <input formControlName="focusReference" type="text" placeholder="18142" />
+            </div>
+            <span class="emsg" *ngIf="f['focusReference'].touched && f['focusReference'].errors?.['required']">Required.</span>
+          </div>
+          <div class="f-group">
+            <label>For (Patient) <span class="req">*</span></label>
+            <div class="ipw" [class.error-wrap]="f['forReference'].touched && f['forReference'].invalid">
+              <span class="ip">Patient/</span>
+              <input formControlName="forReference" type="text" placeholder="16468" />
+            </div>
+            <span class="emsg" *ngIf="f['forReference'].touched && f['forReference'].errors?.['required']">Required.</span>
+          </div>
+        </div>
+        <div class="f-row">
+          <div class="f-group">
+            <label>Requester (Practitioner) <span class="req">*</span></label>
+            <div class="ipw" [class.error-wrap]="f['requesterReference'].touched && f['requesterReference'].invalid">
+              <span class="ip">Practitioner/</span>
+              <input formControlName="requesterReference" type="text" placeholder="16171" />
+            </div>
+            <span class="emsg" *ngIf="f['requesterReference'].touched && f['requesterReference'].errors?.['required']">Required.</span>
+          </div>
+          <div class="f-group">
+            <label>Owner (Practitioner)</label>
+            <div class="ipw">
+              <span class="ip">Practitioner/</span>
+              <input formControlName="ownerReference" type="text" placeholder="18117" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Dates -->
+        <div class="f-section">Dates</div>
+        <div class="f-row">
+          <div class="f-group">
+            <label>Authored on <span class="req">*</span></label>
+            <input formControlName="authoredOn" type="datetime-local"
+              [class.input-error]="f['authoredOn'].touched && f['authoredOn'].invalid" />
+            <span class="emsg" *ngIf="f['authoredOn'].touched && f['authoredOn'].errors?.['required']">Required.</span>
+          </div>
+          <div class="f-group">
+            <label>Last modified</label>
+            <input formControlName="lastModified" type="datetime-local" />
+          </div>
+        </div>
+
+        <!-- Note -->
+        <div class="f-section">Note</div>
+        <div class="f-row">
+          <div class="f-group full">
+            <label>Note</label>
+            <textarea formControlName="noteText" rows="3"
+              placeholder="e.g. New referral for patient management"></textarea>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="f-actions">
+          <button type="button" class="btn btn-ghost" (click)="toggleJson()">
+            {{ showJson() ? 'Hide FHIR JSON' : 'Preview FHIR JSON' }}
+          </button>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn btn-outline" (click)="closeForm()">Cancel</button>
+            <button type="button" class="btn btn-success" (click)="submit()" [disabled]="saving()">
+              <span class="spin-sm" *ngIf="saving()"></span>
+              {{ editId() ? 'Save changes' : 'Create task' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- JSON preview -->
+        <div class="json-preview" *ngIf="showJson()">
+          <pre>{{ jsonPreview }}</pre>
+        </div>
+
+        <!-- Success -->
+        <div class="success-banner" *ngIf="savedId()">
+          <span class="success-check">✓</span>
+          <div>
+            <div class="success-title">Task saved</div>
+            <div class="success-sub">FHIR ID: <code>{{ savedId() }}</code></div>
+          </div>
+          <button class="btn btn-outline" (click)="openNew()">New task</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="tl-loading" *ngIf="loading()">
+    <div class="tl-spinner"></div>
+    <span>Loading tasks…</span>
+  </div>
+
+  <!-- Empty -->
+  <div class="tl-empty" *ngIf="!loading() && tasks().length === 0 && !showForm()">
+    <div class="tl-empty-icon">📋</div>
+    <p>No tasks for this patient.</p>
+    <button class="btn btn-primary" (click)="openNew()">Create first task</button>
+  </div>
+
+  <!-- Task cards -->
+  <div class="tl-list" *ngIf="!loading() && tasks().length > 0">
+    <div class="tl-card" *ngFor="let t of tasks()">
+
+      <div class="tl-card-top">
+        <div class="tl-card-left">
+          <div class="tl-code-badge">{{ t.code?.coding?.[0]?.code ?? '—' }}</div>
+          <div class="tl-card-info">
+            <div class="tl-name">{{ t.code?.text }}</div>
+            <div class="tl-display">{{ t.code?.coding?.[0]?.display }}</div>
+          </div>
+        </div>
+        <div class="tl-card-right">
+          <span class="pill" [ngClass]="statusColor(t.status)">{{ t.status | titlecase }}</span>
+          <span class="pill pill-intent">{{ t.intent | titlecase }}</span>
+          <button class="icon-btn" title="Edit"   (click)="openEdit(t)">✏️</button>
+          <button class="icon-btn icon-btn-danger" title="Delete" (click)="delete(t)">🗑️</button>
+        </div>
+      </div>
+
+      <div class="tl-meta">
+        <div class="tl-meta-item" *ngIf="t.focus?.reference">
+          <span class="tl-meta-label">Focus</span>
+          <span class="tl-meta-value">{{ t.focus.reference }}</span>
+        </div>
+        <div class="tl-meta-item" *ngIf="t.for?.reference">
+          <span class="tl-meta-label">For</span>
+          <span class="tl-meta-value">{{ t.for.reference }}</span>
+        </div>
+        <div class="tl-meta-item" *ngIf="t.requester?.reference">
+          <span class="tl-meta-label">Requester</span>
+          <span class="tl-meta-value">{{ t.requester.reference }}</span>
+        </div>
+        <div class="tl-meta-item" *ngIf="t.owner?.reference">
+          <span class="tl-meta-label">Owner</span>
+          <span class="tl-meta-value">{{ t.owner.reference }}</span>
+        </div>
+        <div class="tl-meta-item" *ngIf="t.authoredOn">
+          <span class="tl-meta-label">Authored</span>
+          <span class="tl-meta-value">{{ t.authoredOn | date:'medium' }}</span>
+        </div>
+        <div class="tl-meta-item" *ngIf="t.lastModified">
+          <span class="tl-meta-label">Modified</span>
+          <span class="tl-meta-value">{{ t.lastModified | date:'medium' }}</span>
+        </div>
+      </div>
+
+      <div class="tl-note" *ngIf="t.note?.[0]?.text">
+        <span class="tl-note-label">Note</span>
+        <p class="tl-note-text">{{ t.note[0].text }}</p>
+      </div>
+
+    </div>
+  </div>
+
+</div>

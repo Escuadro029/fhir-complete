@@ -23,24 +23,119 @@
     <div class="empty" *ngIf="!loading() && patients().length === 0">
       <div style="font-size:36px;margin-bottom:10px;">👤</div>
       <p>No patients found.</p>
-      <a routerLink="/patients/new" class="btn btn-primary" style="margin-top:12px;">Register first patient</a>
+      <a routerLink="/patients/new" class="btn btn-primary" style="margin-top:12px;">
+        Register first patient
+      </a>
     </div>
 
     <div class="patient-list" *ngIf="!loading() && patients().length > 0">
-      <div class="patient-row" *ngFor="let p of patients()" (click)="view(p.id!)">
+      <div class="patient-row"
+        *ngFor="let p of patients()"
+        (click)="getReferralStatus(p.id!) === 'accepted' ? view(p.id!) : null"
+        [class.row-accepted]="getReferralStatus(p.id!) === 'accepted'"
+        [class.row-deferred]="getReferralStatus(p.id!) === 'deferred'"
+        [class.row-clickable]="getReferralStatus(p.id!) === 'accepted'"
+      >
         <div class="avatar">{{ init(p) }}</div>
+
         <div class="pinfo">
           <div class="pname">{{ name(p) }}</div>
-          <div class="pmeta">PhilHealth: {{ phi(p) }} · {{ p.gender | titlecase }} · {{ p.birthDate }}</div>
+          <div class="pmeta">
+            PhilHealth: {{ phi(p) }} · {{ p.gender | titlecase }} · {{ p.birthDate }}
+          </div>
         </div>
-        <span class="badge" [class.badge-active]="p.active !== false" [class.badge-inactive]="p.active === false">
+
+        <!-- Patient active badge -->
+        <span class="badge"
+          [class.badge-active]="p.active !== false"
+          [class.badge-inactive]="p.active === false">
           {{ p.active !== false ? 'Active' : 'Inactive' }}
         </span>
+
+        <!-- Referral status badge -->
+        <span class="referral-badge referral-accepted"
+          *ngIf="getReferralStatus(p.id!) === 'accepted'">
+          ✓ Accepted
+        </span>
+        <span class="referral-badge referral-deferred"
+          *ngIf="getReferralStatus(p.id!) === 'deferred'">
+          ⏸ Deferred
+        </span>
+
+        <!-- Row actions -->
         <div class="row-actions" (click)="$event.stopPropagation()">
+
+          <!-- Referral buttons — only show if not yet actioned -->
+          <ng-container *ngIf="getReferralStatus(p.id!) === 'none'">
+            <button class="btn btn-accept" title="Accept referral"
+              (click)="acceptReferral(p.id!, $event)">
+              ✓ Accept
+            </button>
+            <button class="btn btn-defer" title="Defer referral"
+              (click)="openDeferModal(p.id!, $event)">
+              ⏸ Defer
+            </button>
+          </ng-container>
+
+          <!-- View button — only if accepted -->
+          <button class="icon-btn btn-view" title="View"
+            *ngIf="getReferralStatus(p.id!) === 'accepted'"
+            (click)="view(p.id!)">
+            👁
+          </button>
+
           <button class="icon-btn" title="Edit"   (click)="edit(p.id!)">✏️</button>
           <button class="icon-btn danger" title="Delete" (click)="delete(p, $event)">🗑️</button>
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ── Defer modal ── -->
+<div class="modal-backdrop" *ngIf="showDeferModal()" (click)="closeDeferModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div class="modal-title">⏸ Defer referral</div>
+      <button class="modal-close" (click)="closeDeferModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="modal-desc">
+        Please select or enter a reason for deferring this referral.
+      </p>
+
+      <div class="reason-options">
+        <label class="reason-option" *ngFor="let r of deferReasons">
+          <input type="radio" name="deferReason" [value]="r"
+            [checked]="deferReason() === r"
+            (change)="deferReason.set(r); deferReasonError.set('')" />
+          <span>{{ r }}</span>
+        </label>
+      </div>
+
+      <!-- Custom reason if Other selected -->
+      <div class="custom-reason" *ngIf="deferReason() === 'Other'">
+        <label>Specify reason</label>
+        <textarea
+          rows="3"
+          placeholder="Enter reason for deferral…"
+          (input)="deferReason.set('Other: ' + $any($event.target).value)"
+        ></textarea>
+      </div>
+
+      <div class="reason-error" *ngIf="deferReasonError()">
+        {{ deferReasonError() }}
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" (click)="closeDeferModal()">Cancel</button>
+      <button class="btn btn-defer-confirm" (click)="confirmDefer()">
+        Confirm deferral
+      </button>
+    </div>
+
   </div>
 </div>

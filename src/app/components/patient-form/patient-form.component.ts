@@ -10,50 +10,52 @@ import { ConditionFormComponent } from '../condition-form/condition-form.compone
 import { ServiceRequestFormComponent } from '../service-request-form/service-request-form.component';
 import { ConditionListComponent } from '../condition-list/condition-list.component';
 import { ServiceRequestListComponent } from '../service-request-list/service-request-list.component';
+import { ProcedureListComponent } from '../procedure-list/procedure-list.component';
+import { TaskListComponent } from '../task-list/task-list.component';
 
 @Component({
   selector: 'app-patient-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, AlertComponent, ConditionFormComponent, ServiceRequestFormComponent, FormsModule, ConditionListComponent, ServiceRequestListComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, AlertComponent, ConditionFormComponent, ServiceRequestFormComponent, FormsModule, ConditionListComponent, ServiceRequestListComponent, ProcedureListComponent, ProcedureListComponent, TaskListComponent],
   templateUrl: './patient-form.component.html',
   styleUrls: ['./patient-form.component.css']
 })
 export class PatientFormComponent implements OnInit {
-  private readonly fb      = inject(FormBuilder);
-  private readonly svc     = inject(FhirPatientService);
+  private readonly fb = inject(FormBuilder);
+  private readonly svc = inject(FhirPatientService);
   private readonly psgcSvc = inject(PsgcService);
-  private readonly route   = inject(ActivatedRoute);
-  private readonly router  = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
-  loading          = signal(false);
-  alert            = signal<{ type: 'success'|'error'; message: string }|null>(null);
-  editId           = signal<string|null>(null);
-  savedPatientId   = signal<string|null>(null);
-  showJson         = signal(false);
-  activeTab        = signal<'condition'|'service-request'>('condition');
-  provinces        = signal<PsgcItem[]>([]);
+  loading = signal(false);
+  alert = signal<{ type: 'success' | 'error'; message: string } | null>(null);
+  editId = signal<string | null>(null);
+  savedPatientId = signal<string | null>(null);
+  showJson = signal(false);
+  activeTab = signal<'condition' | 'service-request' | 'procedure' | 'task'>('service-request');
+  provinces = signal<PsgcItem[]>([]);
   loadingProvinces = signal(false);
 
   // PSGC cascading
-  regions   = signal<PsgcItem[]>([]);
-  provs     = signal<PsgcItem[]>([]);
-  cities    = signal<PsgcItem[]>([]);
+  regions = signal<PsgcItem[]>([]);
+  provs = signal<PsgcItem[]>([]);
+  cities = signal<PsgcItem[]>([]);
   barangays = signal<PsgcItem[]>([]);
-  loadingR  = signal(false); loadingP = signal(false);
-  loadingC  = signal(false); loadingB = signal(false);
+  loadingR = signal(false); loadingP = signal(false);
+  loadingC = signal(false); loadingB = signal(false);
   selRegion = ''; selProv = ''; selCity = ''; selBrgy = '';
 
-  isEditMode    = computed(() => !!this.editId());
-  patientSaved  = computed(() => !!this.savedPatientId());
+  isEditMode = computed(() => !!this.editId());
+  patientSaved = computed(() => !!this.savedPatientId());
 
   form = this.fb.group({
     philhealthId: ['', Validators.required],
-    familyName:   ['', Validators.required],
-    givenName:    ['', Validators.required],
-    middleName:   [''],
-    gender:       ['female', Validators.required],
-    birthDate:    ['', Validators.required],
-    active:       [true],
+    familyName: ['', Validators.required],
+    givenName: ['', Validators.required],
+    middleName: [''],
+    gender: ['female', Validators.required],
+    birthDate: ['', Validators.required],
+    active: [true],
     line1: [''], line2: [''], city: [''], district: [''],
     postalCode: [''], country: ['PH']
   });
@@ -121,13 +123,13 @@ export class PatientFormComponent implements OnInit {
   private _psgcBrgy: PsgcItem = { code: '', name: '' };
 
   private psgcFields() {
-    const prov = this.selProv  ? this._psgcProv : this._psgcProv;
-    const city = this.selCity  ? this._psgcCity : this._psgcCity;
-    const brgy = this.selBrgy  ? this._psgcBrgy : this._psgcBrgy;
+    const prov = this.selProv ? this._psgcProv : this._psgcProv;
+    const city = this.selCity ? this._psgcCity : this._psgcCity;
+    const brgy = this.selBrgy ? this._psgcBrgy : this._psgcBrgy;
     return {
-      provinceCode: prov.code,  provinceDisplay: prov.name,
-      cityMunCode:  city.code,  cityMunDisplay:  city.name,
-      barangayCode: brgy.code,  barangayDisplay: brgy.name
+      provinceCode: prov.code, provinceDisplay: prov.name,
+      cityMunCode: city.code, cityMunDisplay: city.name,
+      barangayCode: brgy.code, barangayDisplay: brgy.name
     };
   }
 
@@ -137,9 +139,9 @@ export class PatientFormComponent implements OnInit {
       next: p => {
         const flat = this.svc.fromFhir(p);
         this.form.patchValue(flat as any);
-        this._psgcProv = { code: flat.provinceCode,  name: flat.provinceDisplay  };
-        this._psgcCity = { code: flat.cityMunCode,   name: flat.cityMunDisplay   };
-        this._psgcBrgy = { code: flat.barangayCode,  name: flat.barangayDisplay  };
+        this._psgcProv = { code: flat.provinceCode, name: flat.provinceDisplay };
+        this._psgcCity = { code: flat.cityMunCode, name: flat.cityMunDisplay };
+        this._psgcBrgy = { code: flat.barangayCode, name: flat.barangayDisplay };
         this.loading.set(false);
       },
       error: err => { this.showAlert('error', err.message); this.loading.set(false); }
@@ -149,8 +151,8 @@ export class PatientFormComponent implements OnInit {
   submit(): void {
     if (this.form.invalid) { this.form.markAllAsTouched(); this.showAlert('error', 'Fill in required fields.'); return; }
     this.loading.set(true);
-    const val  = { ...this.form.getRawValue(), ...this.psgcFields() } as any;
-    const id   = this.editId();
+    const val = { ...this.form.getRawValue(), ...this.psgcFields() } as any;
+    const id = this.editId();
     const req$ = id ? this.svc.updatePatient(id, val) : this.svc.createPatient(val);
     req$.subscribe({
       next: r => {
@@ -164,7 +166,7 @@ export class PatientFormComponent implements OnInit {
 
   resetForm(): void {
     this.form.reset(EMPTY_FORM as any);
-    this._psgcProv = { code:'', name:'' }; this._psgcCity = { code:'', name:'' }; this._psgcBrgy = { code:'', name:'' };
+    this._psgcProv = { code: '', name: '' }; this._psgcCity = { code: '', name: '' }; this._psgcBrgy = { code: '', name: '' };
     this.selRegion = ''; this.selProv = ''; this.selCity = ''; this.selBrgy = '';
     this.provs.set([]); this.cities.set([]); this.barangays.set([]);
     this.savedPatientId.set(null);
@@ -173,7 +175,7 @@ export class PatientFormComponent implements OnInit {
 
   toggleJson(): void { this.showJson.update(v => !v); }
 
-  private showAlert(type: 'success'|'error', message: string): void {
+  private showAlert(type: 'success' | 'error', message: string): void {
     this.alert.set({ type, message });
     setTimeout(() => this.alert.set(null), 6000);
   }
