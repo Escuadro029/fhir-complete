@@ -1,432 +1,114 @@
 <div class="pl-wrapper">
 
-  <!-- Header -->
-  <div class="pl-header">
-    <div class="pl-title">
-      🔬 Procedures
-      <span class="pl-count" *ngIf="procedures().length > 0">{{ procedures().length }}</span>
-    </div>
-    <div style="display:flex;gap:8px;">
-      <button class="btn btn-ghost" (click)="load()">↺ Refresh</button>
-      <button class="btn btn-primary" (click)="openNew()">+ Add procedure</button>
-    </div>
-  </div>
-
-  <app-alert *ngIf="alert()" [type]="alert()!.type" [message]="alert()!.message" />
-
-  <!-- ── Stepper form ── -->
-  <div class="pl-form-wrap" *ngIf="showForm()">
-    <div class="pl-form-header">
-      <span>{{ editId() ? 'Edit procedure' : 'New procedure' }}</span>
-      <button class="btn btn-ghost" (click)="closeForm()">✕ Close</button>
+    <!-- Header -->
+    <div class="pl-header">
+        <div class="pl-title">
+            🔬 Procedures
+            <span class="pl-count" *ngIf="procedures().length > 0">{{ procedures().length }}</span>
+        </div>
+        <div class="pl-header-actions">
+            <button class="btn btn-ghost" (click)="load()">↺ Refresh</button>
+            <button class="btn btn-primary" (click)="openNew()">+ Add procedure</button>
+        </div>
     </div>
 
-    <div class="stepper-card">
+    <!-- Alert -->
+    <app-alert *ngIf="alert()" [type]="alert()!.type" [message]="alert()!.message" />
 
-      <!-- Step track -->
-      <div class="step-track">
-        <ng-container *ngFor="let step of steps; let i = index">
-          <div class="step-item" [class.active]="currentStep()===i" [class.done]="isStepDone(i)" (click)="goToStep(i)">
-            <div class="step-bubble"><span *ngIf="isStepDone(i)">✓</span><span *ngIf="!isStepDone(i)">{{i+1}}</span></div>
-            <div class="step-meta"><span class="step-label">{{step.label}}</span><span class="step-desc">{{step.description}}</span></div>
-          </div>
-          <div class="step-line" *ngIf="i<steps.length-1" [class.line-done]="isStepDone(i)"></div>
-        </ng-container>
-      </div>
-
-      <div class="step-body">
-        <div class="loading-overlay" *ngIf="saving()"><div class="spinner"></div></div>
-        <form [formGroup]="form" novalidate>
-
-          <!-- Step 0: Identifiers -->
-          <div *ngIf="currentStep()===0">
-            <div class="step-heading">Identifiers &amp; references</div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>Procedure ID (primary)</label>
-                <div class="input-prefix-wrapper"><span class="input-prefix">PROC-</span><input formControlName="identifier1Value" type="text" placeholder="2024-000123" /></div>
-              </div>
-              <div class="form-group">
-                <label>PhilHealth procedure ID</label>
-                <div class="input-prefix-wrapper"><span class="input-prefix">PH-APP-</span><input formControlName="identifier2Value" type="text" placeholder="789456" /></div>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>Based on (ServiceRequest)</label>
-                <input formControlName="basedOnDisplay" type="text" placeholder="ServiceRequest for emergency appendectomy" />
-              </div>
-              <div class="form-group">
-                <label>Part of (Episode of care)</label>
-                <input formControlName="partOfDisplay" type="text" placeholder="Episode of care for acute abdomen treatment" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 1: Procedure code -->
-          <div *ngIf="currentStep()===1">
-            <div class="step-heading">Procedure code &amp; status</div>
-            <div class="form-row three">
-              <div class="form-group">
-                <label>Status <span class="required">*</span></label>
-                <div class="select-wrapper">
-                  <select formControlName="status">
-                    <option *ngFor="let o of statusOptions" [value]="o.code">{{o.display}}</option>
-                  </select><span class="select-arrow">▾</span>
-                </div>
-              </div>
-              <div class="form-group">
-                <label>Category code</label>
-                <input formControlName="categoryCode" type="text" placeholder="387713003" />
-              </div>
-              <div class="form-group">
-                <label>Category display</label>
-                <input formControlName="categoryDisplay" type="text" placeholder="Surgical procedure" />
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>SNOMED code <span class="required">*</span></label>
-                <input formControlName="procedureCode" type="text" placeholder="e.g. 80146002"
-                  [class.input-error]="f['procedureCode'].touched && f['procedureCode'].invalid" />
-                <span class="error-msg" *ngIf="f['procedureCode'].touched && f['procedureCode'].errors?.['required']">Required.</span>
-              </div>
-              <div class="form-group">
-                <label>Code display <span class="required">*</span></label>
-                <input formControlName="procedureDisplay" type="text" placeholder="e.g. Appendectomy"
-                  [class.input-error]="f['procedureDisplay'].touched && f['procedureDisplay'].invalid" />
-                <span class="error-msg" *ngIf="f['procedureDisplay'].touched && f['procedureDisplay'].errors?.['required']">Required.</span>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group full">
-                <label>Procedure text <span class="required">*</span></label>
-                <input formControlName="procedureText" type="text" placeholder="e.g. Laparoscopic appendectomy"
-                  [class.input-error]="f['procedureText'].touched && f['procedureText'].invalid" />
-                <span class="error-msg" *ngIf="f['procedureText'].touched && f['procedureText'].errors?.['required']">Required.</span>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>Status reason code</label>
-                <input formControlName="statusReasonCode" type="text" placeholder="385669000" />
-              </div>
-              <div class="form-group">
-                <label>Status reason display</label>
-                <input formControlName="statusReasonDisplay" type="text" placeholder="Successful" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 2: Performers & dates -->
-          <div *ngIf="currentStep()===2">
-            <div class="step-heading">Subject, performers &amp; dates</div>
-            <div class="form-row three">
-              <div class="form-group">
-                <label>Patient ID <span class="required">*</span></label>
-                <div class="input-prefix-wrapper" [class.error-wrap]="f['patientReference'].touched && f['patientReference'].invalid">
-                  <span class="input-prefix">Patient/</span>
-                  <input formControlName="patientReference" type="text" placeholder="16468" />
-                </div>
-                <span class="error-msg" *ngIf="f['patientReference'].touched && f['patientReference'].errors?.['required']">Required.</span>
-              </div>
-              <div class="form-group">
-                <label>Recorder (Practitioner)</label>
-                <div class="input-prefix-wrapper"><span class="input-prefix">Practitioner/</span><input formControlName="recorderReference" type="text" placeholder="16171" /></div>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>Start date &amp; time <span class="required">*</span></label>
-                <input formControlName="performedStart" type="datetime-local"
-                  [class.input-error]="f['performedStart'].touched && f['performedStart'].invalid" />
-                <span class="error-msg" *ngIf="f['performedStart'].touched && f['performedStart'].errors?.['required']">Required.</span>
-              </div>
-              <div class="form-group">
-                <label>End date &amp; time <span class="required">*</span></label>
-                <input formControlName="performedEnd" type="datetime-local"
-                  [class.input-error]="f['performedEnd'].touched && f['performedEnd'].invalid" />
-                <span class="error-msg" *ngIf="f['performedEnd'].touched && f['performedEnd'].errors?.['required']">Required.</span>
-              </div>
-            </div>
-
-            <div class="performer-section">
-              <div class="performer-label">Performer 1</div>
-              <div class="form-row three">
-                <div class="form-group">
-                  <label>Function</label>
-                  <div class="select-wrapper">
-                    <select formControlName="performer1Function">
-                      <option *ngFor="let o of performerFunctions" [value]="o.code">{{o.display}}</option>
-                    </select><span class="select-arrow">▾</span>
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label>Actor (Practitioner) <span class="required">*</span></label>
-                  <div class="input-prefix-wrapper" [class.error-wrap]="f['performer1Actor'].touched && f['performer1Actor'].invalid">
-                    <span class="input-prefix">Practitioner/</span>
-                    <input formControlName="performer1Actor" type="text" placeholder="16171" />
-                  </div>
-                  <span class="error-msg" *ngIf="f['performer1Actor'].touched && f['performer1Actor'].errors?.['required']">Required.</span>
-                </div>
-                <div class="form-group">
-                  <label>On behalf of (Organization)</label>
-                  <div class="input-prefix-wrapper"><span class="input-prefix">Organization/</span><input formControlName="performer1Org" type="text" placeholder="16467" /></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="performer-section">
-              <div class="performer-label">Performer 2 (optional)</div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label>Function</label>
-                  <div class="select-wrapper">
-                    <select formControlName="performer2Function">
-                      <option *ngFor="let o of performerFunctions" [value]="o.code">{{o.display}}</option>
-                    </select><span class="select-arrow">▾</span>
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label>Actor (RelatedPerson)</label>
-                  <div class="input-prefix-wrapper"><span class="input-prefix">RelatedPerson/</span><input formControlName="performer2Actor" type="text" placeholder="16566" /></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 3: Reason, outcome, body site -->
-          <div *ngIf="currentStep()===3">
-            <div class="step-heading">Reason, body site &amp; outcome</div>
-            <div class="form-row three">
-              <div class="form-group">
-                <label>Reason code (SNOMED)</label>
-                <input formControlName="reasonCode" type="text" placeholder="e.g. 74400008" />
-              </div>
-              <div class="form-group">
-                <label>Reason display</label>
-                <input formControlName="reasonDisplay" type="text" placeholder="e.g. Appendicitis" />
-              </div>
-              <div class="form-group">
-                <label>Reason reference (Condition)</label>
-                <div class="input-prefix-wrapper"><span class="input-prefix">Condition/</span><input formControlName="reasonReference" type="text" placeholder="16500" /></div>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group full">
-                <label>Reason text</label>
-                <input formControlName="reasonText" type="text" placeholder="e.g. Acute appendicitis with peritonitis" />
-              </div>
-            </div>
-            <div class="form-row three">
-              <div class="form-group">
-                <label>Body site code</label>
-                <input formControlName="bodySiteCode" type="text" placeholder="e.g. 66754008" />
-              </div>
-              <div class="form-group">
-                <label>Body site display</label>
-                <input formControlName="bodySiteDisplay" type="text" placeholder="e.g. Appendix structure" />
-              </div>
-              <div class="form-group">
-                <label>Body site text</label>
-                <input formControlName="bodySiteText" type="text" placeholder="e.g. Right lower quadrant" />
-              </div>
-            </div>
-            <div class="form-row three">
-              <div class="form-group">
-                <label>Outcome code</label>
-                <input formControlName="outcomeCode" type="text" placeholder="385669000" />
-              </div>
-              <div class="form-group">
-                <label>Outcome display</label>
-                <input formControlName="outcomeDisplay" type="text" placeholder="Successful" />
-              </div>
-              <div class="form-group">
-                <label>Outcome text</label>
-                <input formControlName="outcomeText" type="text" placeholder="Procedure completed without complications" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 4: Follow-up, note, used -->
-          <div *ngIf="currentStep()===4">
-            <div class="step-heading">Follow-up, notes &amp; equipment</div>
-            <div class="form-row three">
-              <div class="form-group">
-                <label>Follow-up code</label>
-                <input formControlName="followUpCode" type="text" placeholder="226007004" />
-              </div>
-              <div class="form-group">
-                <label>Follow-up display</label>
-                <input formControlName="followUpDisplay" type="text" placeholder="Post-surgical wound care" />
-              </div>
-              <div class="form-group">
-                <label>Follow-up text</label>
-                <input formControlName="followUpText" type="text" placeholder="Follow-up visit in 7 days…" />
-              </div>
-            </div>
-            <div class="form-row three">
-              <div class="form-group">
-                <label>Used code</label>
-                <input formControlName="usedCode" type="text" placeholder="261424001" />
-              </div>
-              <div class="form-group">
-                <label>Used display</label>
-                <input formControlName="usedDisplay" type="text" placeholder="Primary operation" />
-              </div>
-              <div class="form-group">
-                <label>Used text</label>
-                <input formControlName="usedText" type="text" placeholder="Laparoscopic instruments" />
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group full">
-                <label>Clinical note</label>
-                <textarea formControlName="noteText" rows="4"
-                  placeholder="Patient tolerated procedure well…"></textarea>
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 5: Review -->
-          <div *ngIf="currentStep()===5">
-            <div class="step-heading">Review &amp; confirm</div>
-            <div class="review-grid">
-
-              <div class="review-section">
-                <div class="review-title">Procedure</div>
-                <div class="review-row"><span class="review-label">Code</span><code class="review-code">{{f['procedureCode'].value}}</code></div>
-                <div class="review-row"><span class="review-label">Display</span><span class="review-value">{{f['procedureDisplay'].value}}</span></div>
-                <div class="review-row"><span class="review-label">Text</span><span class="review-value">{{f['procedureText'].value}}</span></div>
-                <div class="review-row"><span class="review-label">Status</span><span class="pill {{ statusColor(f['status'].value) }}">{{labelFor('status', statusOptions)}}</span></div>
-              </div>
-
-              <div class="review-section">
-                <div class="review-title">Subject &amp; timing</div>
-                <div class="review-row"><span class="review-label">Patient</span><code class="review-code">Patient/{{f['patientReference'].value}}</code></div>
-                <div class="review-row"><span class="review-label">Start</span><span class="review-value">{{f['performedStart'].value | date:'medium'}}</span></div>
-                <div class="review-row"><span class="review-label">End</span><span class="review-value">{{f['performedEnd'].value | date:'medium'}}</span></div>
-                <div class="review-row" *ngIf="f['recorderReference'].value"><span class="review-label">Recorder</span><code class="review-code">Practitioner/{{f['recorderReference'].value}}</code></div>
-              </div>
-
-              <div class="review-section" *ngIf="f['performer1Actor'].value">
-                <div class="review-title">Performers</div>
-                <div class="review-row"><span class="review-label">Actor 1</span><code class="review-code">Practitioner/{{f['performer1Actor'].value}}</code></div>
-                <div class="review-row" *ngIf="f['performer1Org'].value"><span class="review-label">Org</span><code class="review-code">Organization/{{f['performer1Org'].value}}</code></div>
-                <div class="review-row" *ngIf="f['performer2Actor'].value"><span class="review-label">Actor 2</span><code class="review-code">RelatedPerson/{{f['performer2Actor'].value}}</code></div>
-              </div>
-
-              <div class="review-section" *ngIf="f['reasonText'].value || f['outcomeText'].value">
-                <div class="review-title">Reason &amp; outcome</div>
-                <div class="review-row" *ngIf="f['reasonCode'].value"><span class="review-label">Reason code</span><code class="review-code">{{f['reasonCode'].value}}</code></div>
-                <div class="review-row" *ngIf="f['reasonText'].value"><span class="review-label">Reason</span><span class="review-value">{{f['reasonText'].value}}</span></div>
-                <div class="review-row" *ngIf="f['outcomeText'].value"><span class="review-label">Outcome</span><span class="review-value">{{f['outcomeText'].value}}</span></div>
-              </div>
-
-              <div class="review-section full" *ngIf="f['noteText'].value">
-                <div class="review-title">Clinical note</div>
-                <div class="review-note">{{f['noteText'].value}}</div>
-              </div>
-
-            </div>
-
-            <div class="success-banner" *ngIf="savedId()">
-              <span class="success-check">✓</span>
-              <div><div class="success-title">Procedure saved</div><div class="success-sub">FHIR ID: <code>{{savedId()}}</code></div></div>
-              <button class="btn btn-outline" (click)="openNew()">Add another</button>
-            </div>
-
-            <div class="json-row"><button type="button" class="btn btn-ghost" (click)="toggleJson()">{{showJson()?'Hide FHIR JSON':'Preview FHIR JSON'}}</button></div>
-            <div class="json-preview" *ngIf="showJson()"><pre>{{jsonPreview}}</pre></div>
-          </div>
-
-        </form>
-      </div>
-
-      <!-- Navigation -->
-      <div class="step-nav">
-        <button class="btn btn-outline" (click)="back()" [disabled]="currentStep()===0">← Back</button>
-        <span class="step-counter">{{currentStep()+1}} / {{steps.length}}</span>
-        <button *ngIf="currentStep()<steps.length-1" class="btn btn-primary" (click)="next()">Next →</button>
-        <button *ngIf="currentStep()===steps.length-1" class="btn btn-success" (click)="submit()" [disabled]="saving()||!!savedId()">
-          <span class="spinner-sm" *ngIf="saving()"></span>
-          {{editId()?'Save changes':'Save procedure'}}
-        </button>
-      </div>
-
+    <!-- Inline form -->
+    <div class="pl-form-wrap" *ngIf="showForm()">
+        <div class="pl-form-header">
+            <span>{{ editId() ? 'Edit procedure' : 'New procedure' }}</span>
+            <button class="btn btn-ghost" (click)="closeForm()">✕ Close</button>
+        </div>
+        <app-procedure-form [patientId]="patientId" [procedureId]="editId() ?? ''" />
     </div>
-  </div>
 
-  <!-- Loading -->
-  <div class="pl-loading" *ngIf="loading()">
-    <div class="spinner"></div><span>Loading procedures…</span>
-  </div>
-
-  <!-- Empty -->
-  <div class="pl-empty" *ngIf="!loading() && procedures().length===0 && !showForm()">
-    <div style="font-size:32px;margin-bottom:10px;">🔬</div>
-    <p>No procedures recorded for this patient.</p>
-    <button class="btn btn-primary" (click)="openNew()">Record first procedure</button>
-  </div>
-
-  <!-- Procedure cards -->
-  <div class="pl-list" *ngIf="!loading() && procedures().length > 0">
-    <div class="pl-card" *ngFor="let p of procedures()">
-
-      <div class="pl-card-top">
-        <div class="pl-card-left">
-          <div class="pl-code-badge">{{p.code?.coding?.[0]?.code ?? '—'}}</div>
-          <div>
-            <div class="pl-name">{{p.code?.text}}</div>
-            <div class="pl-display">{{p.code?.coding?.[0]?.display}}</div>
-          </div>
-        </div>
-        <div class="pl-card-actions">
-          <span class="pill {{statusColor(p.status)}}">{{p.status | titlecase}}</span>
-          <span class="pill pill-category" *ngIf="p.category?.coding?.[0]?.display">{{p.category!.coding[0].display}}</span>
-          <button class="icon-btn" title="Edit"   (click)="openEdit(p)">✏️</button>
-          <button class="icon-btn danger" title="Delete" (click)="delete(p)">🗑️</button>
-        </div>
-      </div>
-
-      <div class="pl-meta">
-        <div class="pl-meta-item" *ngIf="p.performedPeriod?.start">
-          <span class="pl-meta-label">Start</span>
-          <span class="pl-meta-value">{{p.performedPeriod!.start | date:'medium'}}</span>
-        </div>
-        <div class="pl-meta-item" *ngIf="p.performedPeriod?.end">
-          <span class="pl-meta-label">End</span>
-          <span class="pl-meta-value">{{p.performedPeriod!.end | date:'medium'}}</span>
-        </div>
-        <div class="pl-meta-item" *ngIf="p.performer?.[0]?.actor?.reference">
-          <span class="pl-meta-label">Performer</span>
-          <span class="pl-meta-value">{{p.performer[0].actor.reference}}</span>
-        </div>
-        <div class="pl-meta-item" *ngIf="p.recorder?.reference">
-          <span class="pl-meta-label">Recorder</span>
-          <span class="pl-meta-value">{{p.recorder!.reference}}</span>
-        </div>
-        <div class="pl-meta-item" *ngIf="p.bodySite?.[0]?.text">
-          <span class="pl-meta-label">Body site</span>
-          <span class="pl-meta-value">{{p.bodySite![0].text}}</span>
-        </div>
-        <div class="pl-meta-item" *ngIf="p.outcome?.text">
-          <span class="pl-meta-label">Outcome</span>
-          <span class="pl-meta-value">{{p.outcome!.text}}</span>
-        </div>
-      </div>
-
-      <div class="pl-reason" *ngIf="p.reasonCode?.[0]?.text">
-        <span class="pl-sub-label">Reason</span>
-        <p class="pl-sub-text">{{p.reasonCode![0].text}}</p>
-      </div>
-
-      <div class="pl-note" *ngIf="p.note?.[0]?.text">
-        <span class="pl-sub-label">Note</span>
-        <p class="pl-sub-text italic">{{p.note![0].text}}</p>
-      </div>
-
+    <!-- Loading -->
+    <div class="pl-loading" *ngIf="loading()">
+        <div class="pl-spinner"></div>
+        <span>Loading procedures…</span>
     </div>
-  </div>
+
+    <!-- Empty state -->
+    <div class="pl-empty" *ngIf="!loading() && procedures().length === 0 && !showForm()">
+        <div class="pl-empty-icon">🔬</div>
+        <p>No procedures recorded for this patient.</p>
+        <button class="btn btn-primary" (click)="openNew()">Record first procedure</button>
+    </div>
+
+    <!-- Procedure cards -->
+    <div class="pl-list" *ngIf="!loading() && procedures().length > 0">
+        <div class="pl-card" *ngFor="let p of procedures()">
+
+            <!-- Card top row -->
+            <div class="pl-card-top">
+                <div class="pl-card-left">
+                    <div class="pl-code-badge">{{ p.code?.coding?.[0]?.code ?? '—' }}</div>
+                    <div class="pl-card-info">
+                        <div class="pl-name">{{ p.code?.text }}</div>
+                        <div class="pl-display">{{ p.code?.coding?.[0]?.display }}</div>
+                    </div>
+                </div>
+                <div class="pl-card-right">
+                    <span class="pill" [ngClass]="statusColor(p.status)">
+                        {{ p.status | titlecase }}
+                    </span>
+                    <span class="pill pill-category" *ngIf="p.category?.coding?.[0]?.display">
+                        {{ p.category!.coding[0].display }}
+                    </span>
+                    <button class="icon-btn" title="Edit" (click)="openEdit(p)">✏️</button>
+                    <button class="icon-btn icon-btn-danger" title="Delete" (click)="delete(p)">🗑️</button>
+                </div>
+            </div>
+
+            <!-- Meta row -->
+            <div class="pl-meta">
+                <div class="pl-meta-item" *ngIf="p.performedPeriod?.start">
+                    <span class="pl-meta-label">Start</span>
+                    <span class="pl-meta-value">{{ p.performedPeriod!.start | date:'medium' }}</span>
+                </div>
+                <div class="pl-meta-item" *ngIf="p.performedPeriod?.end">
+                    <span class="pl-meta-label">End</span>
+                    <span class="pl-meta-value">{{ p.performedPeriod!.end | date:'medium' }}</span>
+                </div>
+                <div class="pl-meta-item" *ngIf="p.performer?.[0]?.actor?.reference">
+                    <span class="pl-meta-label">Performer</span>
+                    <span class="pl-meta-value">{{ p.performer[0].actor.reference }}</span>
+                </div>
+                <div class="pl-meta-item" *ngIf="p.recorder?.reference">
+                    <span class="pl-meta-label">Recorder</span>
+                    <span class="pl-meta-value">{{ p.recorder!.reference }}</span>
+                </div>
+                <div class="pl-meta-item" *ngIf="p.bodySite?.[0]?.text">
+                    <span class="pl-meta-label">Body site</span>
+                    <span class="pl-meta-value">{{ p.bodySite![0].text }}</span>
+                </div>
+                <div class="pl-meta-item" *ngIf="p.outcome?.text">
+                    <span class="pl-meta-label">Outcome</span>
+                    <span class="pl-meta-value">{{ p.outcome!.text }}</span>
+                </div>
+            </div>
+
+            <!-- Reason -->
+            <div class="pl-detail-row" *ngIf="p.reasonCode?.[0]?.text">
+                <span class="pl-detail-label">Reason</span>
+                <span class="pl-detail-text">{{ p.reasonCode![0].text }}</span>
+            </div>
+
+            <!-- Follow-up -->
+            <div class="pl-detail-row" *ngIf="p.followUp?.[0]?.text">
+                <span class="pl-detail-label">Follow-up</span>
+                <span class="pl-detail-text">{{ p.followUp![0].text }}</span>
+            </div>
+
+            <!-- Note -->
+            <div class="pl-note" *ngIf="p.note?.[0]?.text">
+                <span class="pl-detail-label">Note</span>
+                <p class="pl-note-text">{{ p.note![0].text }}</p>
+            </div>
+
+        </div>
+    </div>
 
 </div>

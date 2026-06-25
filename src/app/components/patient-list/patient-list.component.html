@@ -1,4 +1,6 @@
 <div class="page">
+
+  <!-- Page header -->
   <div class="page-header">
     <h1 class="page-title">Patients</h1>
     <a routerLink="/patients/new" class="btn btn-primary">+ Register patient</a>
@@ -7,6 +9,8 @@
   <app-alert *ngIf="alert()" [type]="alert()!.type" [message]="alert()!.message" />
 
   <div class="card">
+
+    <!-- Toolbar -->
     <div class="toolbar">
       <div class="search-wrap">
         <input type="text" [(ngModel)]="searchQuery" (keyup.enter)="search()"
@@ -16,31 +20,226 @@
       <button class="btn btn-ghost" (click)="load()">↺ Refresh</button>
     </div>
 
+    <!-- Loading -->
     <div class="loading-row" *ngIf="loading()">
-      <div class="spinner"></div><span>Loading…</span>
+      <div class="spinner"></div>
+      <span>Loading patients…</span>
     </div>
 
+    <!-- Empty -->
     <div class="empty" *ngIf="!loading() && patients().length === 0">
-      <div style="font-size:36px;margin-bottom:10px;">👤</div>
+      <div class="empty-icon">👤</div>
       <p>No patients found.</p>
-      <a routerLink="/patients/new" class="btn btn-primary" style="margin-top:12px;">Register first patient</a>
+      <a routerLink="/patients/new" class="btn btn-primary" style="margin-top:14px;">
+        Register first patient
+      </a>
     </div>
 
+    <!-- Patient list -->
     <div class="patient-list" *ngIf="!loading() && patients().length > 0">
-      <div class="patient-row" *ngFor="let p of patients()" (click)="view(p.id!)">
+      <div class="patient-row"
+        *ngFor="let p of patients()"
+        [class.row-accepted]="getSRStatus(p.id!) === 'active'"
+        [class.row-deferred]="getSRStatus(p.id!) === 'on-hold'"
+        [class.row-clickable]="getSRStatus(p.id!) === 'active'"
+        (click)="getSRStatus(p.id!) === 'active' ? view(p.id!) : null">
+
+        <!-- Avatar -->
         <div class="avatar">{{ init(p) }}</div>
+
+        <!-- Patient info block -->
         <div class="pinfo">
+
           <div class="pname">{{ name(p) }}</div>
-          <div class="pmeta">PhilHealth: {{ phi(p) }} · {{ p.gender | titlecase }} · {{ p.birthDate }}</div>
+
+          <div class="pmeta">
+            <span class="pmeta-item">
+              <span class="pmeta-label">PhilHealth</span>
+              <span class="pmeta-value">{{ phi(p) }}</span>
+            </span>
+            <span class="pmeta-dot">·</span>
+            <span class="pmeta-item">{{ p.gender | titlecase }}</span>
+            <span class="pmeta-dot">·</span>
+            <span class="pmeta-item">{{ p.birthDate }}</span>
+          </div>
+
+          <!-- Service request info block -->
+          <div class="sr-block" *ngIf="getSR(p.id!) || isSRLoading(p.id!)">
+
+            <div class="sr-loading-row" *ngIf="isSRLoading(p.id!)">
+              <div class="mini-spinner"></div>
+              <span class="sr-loading-text">Loading referral…</span>
+            </div>
+
+            <ng-container *ngIf="!isSRLoading(p.id!) && getSR(p.id!)">
+              <div class="sr-row">
+
+                <div class="sr-chip sr-chip-ref" *ngIf="getSR(p.id!)!.requisition?.value">
+                  <span class="sr-chip-icon">📋</span>
+                  <span>{{ getSR(p.id!)!.requisition!.value }}</span>
+                </div>
+
+                <div class="sr-chip sr-chip-cat" *ngIf="getSR(p.id!)!.category?.[0]?.text">
+                  <span>{{ getSR(p.id!)!.category![0].text }}</span>
+                </div>
+
+                <div class="sr-chip sr-chip-requester" *ngIf="getSR(p.id!)!.requester?.reference">
+                  <span class="sr-chip-icon">👤</span>
+                  <span>{{ getPractitionerName(getSR(p.id!)!.requester!.reference) }}</span>
+                </div>
+
+                <div class="sr-chip sr-chip-org" *ngIf="getSR(p.id!)!.performer?.[0]?.reference">
+                  <span class="sr-chip-icon">🏥</span>
+                  <span>{{ getOrganizationName(getSR(p.id!)!.performer![0].reference) }}</span>
+                </div>
+
+              </div>
+
+              <div class="sr-reason" *ngIf="getSR(p.id!)!.reasonCode?.[0]?.text">
+                <span class="sr-reason-icon">📌</span>
+                <span>
+                  {{ getSR(p.id!)!.reasonCode![0].text | slice:0:80 }}
+                  <span *ngIf="getSR(p.id!)!.reasonCode![0].text.length > 80">…</span>
+                </span>
+              </div>
+            </ng-container>
+
+          </div>
         </div>
-        <span class="badge" [class.badge-active]="p.active !== false" [class.badge-inactive]="p.active === false">
-          {{ p.active !== false ? 'Active' : 'Inactive' }}
-        </span>
-        <div class="row-actions" (click)="$event.stopPropagation()">
-          <button class="icon-btn" title="Edit"   (click)="edit(p.id!)">✏️</button>
-          <button class="icon-btn danger" title="Delete" (click)="delete(p, $event)">🗑️</button>
+
+        <!-- Right side: badges + actions -->
+        <div class="pright">
+
+          <div class="badges-row">
+            <span class="badge"
+              [class.badge-active]="p.active !== false"
+              [class.badge-inactive]="p.active === false">
+              {{ p.active !== false ? 'Active' : 'Inactive' }}
+            </span>
+            <span class="referral-badge referral-accepted"
+              *ngIf="getSRStatus(p.id!) === 'active'">✓ Accepted</span>
+            <span class="referral-badge referral-deferred"
+              *ngIf="getSRStatus(p.id!) === 'on-hold'">⏸ Deferred</span>
+            <span class="referral-badge referral-pending"
+              *ngIf="getSRStatus(p.id!) === 'requested'">🔔 Pending</span>
+            <span class="referral-badge referral-draft"
+              *ngIf="getSRStatus(p.id!) === 'draft'">📝 Draft</span>
+            <span class="referral-badge referral-completed"
+              *ngIf="getSRStatus(p.id!) === 'completed'">✅ Completed</span>
+            <span class="referral-badge referral-none"
+              *ngIf="getSRStatus(p.id!) === 'none' && !isSRLoading(p.id!)">No SR</span>
+          </div>
+
+          <!-- Row actions -->
+          <div class="row-actions" (click)="$event.stopPropagation()">
+
+            <!-- Accept + Defer — always show when SR exists and not completed -->
+            <ng-container *ngIf="getSRStatus(p.id!) !== 'completed' && getSRStatus(p.id!) !== 'none'">
+              <button class="btn-accept"
+                [class.btn-active]="getSRStatus(p.id!) === 'active'"
+                [disabled]="isSRLoading(p.id!)"
+                (click)="acceptReferral(p.id!, $event)">
+                ✓ Accept
+              </button>
+              <button class="btn-defer"
+                [class.btn-hold]="getSRStatus(p.id!) === 'on-hold'"
+                [disabled]="isSRLoading(p.id!)"
+                (click)="openDeferModal(p.id!, $event)">
+                ⏸ Defer
+              </button>
+            </ng-container>
+
+            <!-- View — when accepted -->
+            <button class="icon-btn btn-view" title="View patient"
+              *ngIf="getSRStatus(p.id!) === 'active'"
+              (click)="view(p.id!)">👁</button>
+
+            <button class="icon-btn" title="Edit"   (click)="edit(p.id!)">✏️</button>
+            <button class="icon-btn danger" title="Delete" (click)="delete(p, $event)">🗑️</button>
+          </div>
+
         </div>
+
       </div>
     </div>
+
+  </div>
+</div>
+
+<!-- ── Defer modal ── -->
+<div class="modal-backdrop" *ngIf="showDeferModal()" (click)="closeDeferModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div class="modal-title">⏸ Defer referral</div>
+      <button class="modal-close" (click)="closeDeferModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="modal-desc">
+        Select a reason for deferring this referral.
+        The ServiceRequest status will be set to <strong>on-hold</strong>.
+      </p>
+
+      <div class="sr-detail-box"
+        *ngIf="deferPatientId() && getSR(deferPatientId()!)">
+        <div class="sr-detail-row">
+          <span class="sr-detail-label">Requisition</span>
+          <span class="sr-detail-value">
+            {{ getSR(deferPatientId()!)!.requisition?.value ?? '—' }}
+          </span>
+        </div>
+        <div class="sr-detail-row">
+          <span class="sr-detail-label">Category</span>
+          <span class="sr-detail-value">
+            {{ getSR(deferPatientId()!)!.category?.[0]?.text ?? '—' }}
+          </span>
+        </div>
+        <div class="sr-detail-row">
+          <span class="sr-detail-label">Requester</span>
+          <span class="sr-detail-value">
+            {{ getPractitionerName(getSR(deferPatientId()!)!.requester?.reference) }}
+          </span>
+        </div>
+        <div class="sr-detail-row">
+          <span class="sr-detail-label">Facility</span>
+          <span class="sr-detail-value">
+            {{ getOrganizationName(getSR(deferPatientId()!)!.performer?.[0]?.reference) }}
+          </span>
+        </div>
+        <div class="sr-detail-row">
+          <span class="sr-detail-label">Current status</span>
+          <span class="sr-detail-value">
+            {{ getSR(deferPatientId()!)!.status }}
+          </span>
+        </div>
+      </div>
+
+      <div class="reason-options">
+        <label class="reason-option"
+          *ngFor="let r of deferReasons"
+          [class.selected]="deferReason() === r">
+          <input type="radio" name="deferReason" [value]="r"
+            (change)="deferReason.set(r); deferReasonError.set('')" />
+          <span>{{ r }}</span>
+        </label>
+      </div>
+
+      <div class="custom-reason" *ngIf="deferReason() === 'Other'">
+        <label>Specify reason <span class="req">*</span></label>
+        <textarea rows="3" placeholder="Enter reason for deferral…"
+          [(ngModel)]="customReason"></textarea>
+      </div>
+
+      <div class="reason-error" *ngIf="deferReasonError()">
+        {{ deferReasonError() }}
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" (click)="closeDeferModal()">Cancel</button>
+      <button class="btn-defer-confirm" (click)="confirmDefer()">Confirm deferral</button>
+    </div>
+
   </div>
 </div>
