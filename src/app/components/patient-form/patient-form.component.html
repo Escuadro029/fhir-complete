@@ -159,7 +159,7 @@
       </div>
 
       <!-- Province standalone + auto-filled city -->
-        <!--<div class="frow" style="margin-top:8px;">
+      <!--<div class="frow" style="margin-top:8px;">
           <div class="fg">
             <label>Province (all PH) <span class="loading-dot" *ngIf="loadingProvinces()">…</span></label>
             <div class="sw">
@@ -177,7 +177,7 @@
           </div>
         </div>
         -->
-        <!-- PSGC codes preview -->
+      <!-- PSGC codes preview -->
       <div class="psgc-preview" *ngIf="selProv || selCity || selBrgy">
         <span class="psgc-preview-label">PSGC codes:</span>
         <span class="psgc-chip" *ngIf="selProv">{{ selProv }}</span>
@@ -209,23 +209,38 @@
   </div>
 
   <!-- ── Clinical tabs (shown after patient saved) ── -->
-  <div class="tab-bar">
-    <button class="tab-btn" [class.active]="activeTab() === 'service-request'"
-      (click)="activeTab.set('service-request')">📋 Service Request</button>
-    <button class="tab-btn" [class.active]="activeTab() === 'condition'" (click)="activeTab.set('condition')">🩺
-      Condition</button>
-    <button class="tab-btn" [class.active]="activeTab() === 'procedure'" (click)="activeTab.set('procedure')">🔬
-      Procedure</button>
-    <button class="tab-btn" [class.active]="activeTab()==='task'" (click)="activeTab.set('task')">📝 Task</button>
-  </div>
+  <!-- Tab bar -->
+<!-- Tab bar -->
+<div class="tab-bar">
+    <button class="tab-btn" [class.active]="activeTab()==='service-request'" (click)="activeTab.set('service-request')">
+    📋<span class="tab-txt">SR</span>
+  </button>
+  <button class="tab-btn" [class.active]="activeTab()==='encounter'"       (click)="activeTab.set('encounter')">
+    🏥<span class="tab-txt">Encounter</span>
+  </button>
 
-  <app-condition-list *ngIf="activeTab() === 'condition'" [patientId]="savedPatientId()!" />
+  <!-- <button class="tab-btn" [class.active]="activeTab()==='condition'"       (click)="activeTab.set('condition')">
+    🩺<span class="tab-txt">Condition</span>
+  </button>
+  <button class="tab-btn" [class.active]="activeTab()==='procedure'"       (click)="activeTab.set('procedure')">
+    🔬<span class="tab-txt">Procedure</span>
+  </button> -->
+  <button class="tab-btn" [class.active]="activeTab()==='task'"            (click)="activeTab.set('task')">
+    📝<span class="tab-txt">Task</span>
+  </button>
+  <!-- <button class="tab-btn" [class.active]="activeTab()==='observation'"     (click)="activeTab.set('observation')">
+    📊<span class="tab-txt">Obs</span>
+  </button> -->
+</div>
 
-  <app-service-request-list *ngIf="activeTab() === 'service-request'" [patientId]="savedPatientId()!" />
-
-  <app-procedure-list *ngIf="activeTab() === 'procedure'" [patientId]="savedPatientId()!" />
-
-  <app-task-list *ngIf="activeTab()==='task'" [patientId]="savedPatientId()!" />
+<div class="tab-content">
+  <app-encounter-list       *ngIf="activeTab()==='encounter'"       [patientId]="savedPatientId()!" />
+  <app-service-request-list *ngIf="activeTab()==='service-request'" [patientId]="savedPatientId()!" />
+  <app-condition-list       *ngIf="activeTab()==='condition'"       [patientId]="savedPatientId()!" />
+  <app-procedure-list       *ngIf="activeTab()==='procedure'"       [patientId]="savedPatientId()!" />
+  <app-task-list            *ngIf="activeTab()==='task'"            [patientId]="savedPatientId()!" />
+  <!-- <app-observation-list     *ngIf="activeTab()==='observation'"     [patientId]="savedPatientId()!" /> -->
+</div>
   <!-- Prompt to save patient first -->
   <div *ngIf="!patientSaved()" class="save-prompt">
     💡 Register the patient above to unlock the Condition and Service Request forms.

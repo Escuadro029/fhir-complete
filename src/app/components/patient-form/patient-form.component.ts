@@ -12,11 +12,12 @@ import { ConditionListComponent } from '../condition-list/condition-list.compone
 import { ServiceRequestListComponent } from '../service-request-list/service-request-list.component';
 import { ProcedureListComponent } from '../procedure-list/procedure-list.component';
 import { TaskListComponent } from '../task-list/task-list.component';
+import { EncounterListComponent } from '../encounter-list/encounter-list.component';
 
 @Component({
   selector: 'app-patient-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, AlertComponent, ConditionFormComponent, ServiceRequestFormComponent, FormsModule, ConditionListComponent, ServiceRequestListComponent, ProcedureListComponent, ProcedureListComponent, TaskListComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, AlertComponent, ConditionFormComponent, ServiceRequestFormComponent, FormsModule, ConditionListComponent, ServiceRequestListComponent, ProcedureListComponent, ProcedureListComponent, TaskListComponent, EncounterListComponent ],
   templateUrl: './patient-form.component.html',
   styleUrls: ['./patient-form.component.css']
 })
@@ -32,7 +33,7 @@ export class PatientFormComponent implements OnInit {
   editId = signal<string | null>(null);
   savedPatientId = signal<string | null>(null);
   showJson = signal(false);
-  activeTab = signal<'condition' | 'service-request' | 'procedure' | 'task'>('service-request');
+  activeTab = signal<'condition' | 'service-request' | 'procedure' | 'task' | 'encounter'>('service-request');
   provinces = signal<PsgcItem[]>([]);
   loadingProvinces = signal(false);
 

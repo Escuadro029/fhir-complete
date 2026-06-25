@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -24,6 +24,12 @@ interface FhirServiceRequest {
   requisition?: { system: string; value: string };
 }
 
+interface OrgOption {
+  id: string;
+  name: string;
+  reference: string;
+}
+
 @Component({
   selector: 'app-patient-list',
   standalone: true,
@@ -42,18 +48,24 @@ export class PatientListComponent implements OnInit {
     'Accept':       'application/fhir+json'
   });
 
-  patients    = signal<FhirPatient[]>([]);
-  loading     = signal(false);
-  searchQuery = '';
-  alert       = signal<{ type: 'success'|'error'; message: string }|null>(null);
+  allPatients  = signal<FhirPatient[]>([]);
+  patients     = signal<FhirPatient[]>([]);
+  loading      = signal(false);
+  totalCount   = signal(0);
+  searchQuery  = '';
+  selectedOrg  = '';   // selected org filter value (reference string)
+  alert        = signal<{ type: 'success'|'error'; message: string }|null>(null);
 
-  // Service requests per patient id
+  // SR per patient
   serviceRequests = signal<Record<string, FhirServiceRequest>>({});
   loadingSR       = signal<Record<string, boolean>>({});
 
-  // Practitioner & Organization name caches
+  // Name caches
   practitioners = signal<Record<string, string>>({});
   organizations = signal<Record<string, string>>({});
+
+  // Org dropdown options (built from loaded SRs)
+  orgOptions = signal<OrgOption[]>([]);
 
   // Defer modal
   showDeferModal   = signal(false);
@@ -73,12 +85,16 @@ export class PatientListComponent implements OnInit {
 
   ngOnInit(): void { this.load(); }
 
-  // ── Load all patients ─────────────────────────────
+  // ── Load ALL patients ─────────────────────────────
   load(): void {
     this.loading.set(true);
-    this.svc.getPatients().subscribe({
+    this.searchQuery = '';
+    this.selectedOrg = '';
+    this.svc.getPatients(1000000).subscribe({
       next: list => {
+        this.allPatients.set(list);
         this.patients.set(list);
+        this.totalCount.set(list.length);
         this.loading.set(false);
         list.forEach(p => { if (p.id) this.fetchServiceRequest(p.id); });
       },
@@ -86,7 +102,41 @@ export class PatientListComponent implements OnInit {
     });
   }
 
-  // ── Fetch latest SR for a patient ─────────────────
+  // ── Filter (search + org) ─────────────────────────
+  applyFilters(): void {
+    const q   = this.searchQuery.trim().toLowerCase();
+    const org = this.selectedOrg;
+
+    let result = this.allPatients();
+
+    // Name / PhilHealth search
+    if (q) {
+      result = result.filter(p =>
+        this.svc.getFullName(p).toLowerCase().includes(q) ||
+        this.svc.getPhilHealthId(p).toLowerCase().includes(q)
+      );
+    }
+
+    // Org filter — match by performer reference
+    if (org) {
+      result = result.filter(p => {
+        const sr = this.getSR(p.id!);
+        return sr?.performer?.some(perf => perf.reference === org);
+      });
+    }
+
+    this.patients.set(result);
+  }
+
+  onSearchChange(): void  { this.applyFilters(); }
+  onOrgChange(): void     { this.applyFilters(); }
+  clearFilters(): void    { this.searchQuery = ''; this.selectedOrg = ''; this.applyFilters(); }
+
+  get isFiltered(): boolean {
+    return !!this.searchQuery.trim() || !!this.selectedOrg;
+  }
+
+  // ── Fetch SR ──────────────────────────────────────
   fetchServiceRequest(patientId: string): void {
     this.loadingSR.update(s => ({ ...s, [patientId]: true }));
     this.http.get<any>(
@@ -106,18 +156,17 @@ export class PatientListComponent implements OnInit {
     });
   }
 
-  // ── Fetch practitioner name ───────────────────────
+  // ── Practitioner name ─────────────────────────────
   fetchPractitionerName(reference: string): void {
     const id = reference.replace('Practitioner/', '');
     if (this.practitioners()[id]) return;
-    this.http.get<any>(`${this.BASE}/Practitioner/${id}`, { headers: this.H })
-      .subscribe({
-        next:  p   => this.practitioners.update(s => ({ ...s, [id]: this.extractHumanName(p.name) })),
-        error: ()  => this.practitioners.update(s => ({ ...s, [id]: reference }))
-      });
+    this.http.get<any>(`${this.BASE}/Practitioner/${id}`, { headers: this.H }).subscribe({
+      next:  p  => this.practitioners.update(s => ({ ...s, [id]: this.extractHumanName(p.name) })),
+      error: () => this.practitioners.update(s => ({ ...s, [id]: reference }))
+    });
   }
 
-  // ── Fetch organization or practitioner name ───────
+  // ── Organization / performer name ─────────────────
   fetchOrganizationName(reference: string): void {
     const isOrg = reference.startsWith('Organization/');
     const id    = reference.replace('Organization/', '').replace('Practitioner/', '');
@@ -125,22 +174,34 @@ export class PatientListComponent implements OnInit {
     const url = isOrg
       ? `${this.BASE}/Organization/${id}`
       : `${this.BASE}/Practitioner/${id}`;
-    this.http.get<any>(url, { headers: this.H })
-      .subscribe({
-        next:  r   => {
-          const name = isOrg ? (r.name ?? reference) : this.extractHumanName(r.name);
-          this.organizations.update(s => ({ ...s, [id]: name }));
-        },
-        error: ()  => this.organizations.update(s => ({ ...s, [id]: reference }))
-      });
+    this.http.get<any>(url, { headers: this.H }).subscribe({
+      next: r => {
+        const name = isOrg ? (r.name ?? reference) : this.extractHumanName(r.name);
+        this.organizations.update(s => ({ ...s, [id]: name }));
+        // Add to org dropdown options if not already there
+        this.addOrgOption(reference, name);
+      },
+      error: () => {
+        this.organizations.update(s => ({ ...s, [id]: reference }));
+        this.addOrgOption(reference, reference);
+      }
+    });
+  }
+
+  private addOrgOption(reference: string, name: string): void {
+    const id = reference.replace('Organization/', '').replace('Practitioner/', '');
+    const current = this.orgOptions();
+    if (!current.find(o => o.reference === reference)) {
+      this.orgOptions.update(opts =>
+        [...opts, { id, name, reference }].sort((a, b) => a.name.localeCompare(b.name))
+      );
+    }
   }
 
   private extractHumanName(names: any[]): string {
     if (!names?.length) return '—';
-    const n      = names[0];
-    const given  = (n.given ?? []).join(' ');
-    const family = n.family ?? '';
-    return `${given} ${family}`.trim() || '—';
+    const n = names[0];
+    return `${(n.given ?? []).join(' ')} ${n.family ?? ''}`.trim() || '—';
   }
 
   getPractitionerName(reference?: string): string {
@@ -168,7 +229,7 @@ export class PatientListComponent implements OnInit {
     return this.loadingSR()[patientId] ?? false;
   }
 
-  // ── Accept referral ───────────────────────────────
+  // ── Accept ────────────────────────────────────────
   acceptReferral(patientId: string, e: Event): void {
     e.stopPropagation();
     const sr = this.getSR(patientId);
@@ -176,7 +237,7 @@ export class PatientListComponent implements OnInit {
     this.updateSRStatus(sr, 'active', patientId);
   }
 
-  // ── Open defer modal ──────────────────────────────
+  // ── Defer modal ───────────────────────────────────
   openDeferModal(patientId: string, e: Event): void {
     e.stopPropagation();
     const sr = this.getSR(patientId);
@@ -188,41 +249,30 @@ export class PatientListComponent implements OnInit {
     this.showDeferModal.set(true);
   }
 
-  // ── Confirm defer ─────────────────────────────────
   confirmDefer(): void {
     const reason = this.deferReason() === 'Other'
       ? this.customReason.trim()
       : this.deferReason();
-
-    if (!reason) {
-      this.deferReasonError.set('Please select or enter a reason.');
-      return;
-    }
+    if (!reason) { this.deferReasonError.set('Please select or enter a reason.'); return; }
 
     const patientId = this.deferPatientId();
     const sr        = patientId ? this.getSR(patientId) : null;
     if (!sr) return;
 
     const updated: FhirServiceRequest = {
-      ...sr,
-      status: 'on-hold',
+      ...sr, status: 'on-hold',
       note: [...(sr.note ?? []), { text: `Deferred: ${reason}` }]
     };
 
     this.http.put<FhirServiceRequest>(
-      `${this.BASE}/ServiceRequest/${sr.id}`,
-      updated,
-      { headers: this.H }
+      `${this.BASE}/ServiceRequest/${sr.id}`, updated, { headers: this.H }
     ).subscribe({
       next: result => {
         if (patientId) this.serviceRequests.update(s => ({ ...s, [patientId]: result }));
         this.showAlert('success', `Referral deferred · ${reason}`);
         this.closeDeferModal();
       },
-      error: err => {
-        this.showAlert('error', 'Failed to defer: ' + err.message);
-        this.closeDeferModal();
-      }
+      error: err => { this.showAlert('error', 'Failed: ' + err.message); this.closeDeferModal(); }
     });
   }
 
@@ -234,12 +284,9 @@ export class PatientListComponent implements OnInit {
     this.customReason = '';
   }
 
-  // ── PUT SR status ─────────────────────────────────
   private updateSRStatus(sr: FhirServiceRequest, status: string, patientId: string): void {
     this.http.put<FhirServiceRequest>(
-      `${this.BASE}/ServiceRequest/${sr.id}`,
-      { ...sr, status },
-      { headers: this.H }
+      `${this.BASE}/ServiceRequest/${sr.id}`, { ...sr, status }, { headers: this.H }
     ).subscribe({
       next:  result => {
         this.serviceRequests.update(s => ({ ...s, [patientId]: result }));
@@ -249,29 +296,17 @@ export class PatientListComponent implements OnInit {
     });
   }
 
-  // ── Search ────────────────────────────────────────
-  search(): void {
-    if (!this.searchQuery.trim()) { this.load(); return; }
-    this.loading.set(true);
-    this.svc.getPatients(100000).subscribe({
-      next: list => {
-        const q = this.searchQuery.toLowerCase();
-        this.patients.set(list.filter(p =>
-          this.svc.getFullName(p).toLowerCase().includes(q) ||
-          this.svc.getPhilHealthId(p).toLowerCase().includes(q)
-        ));
-        this.loading.set(false);
-      },
-      error: err => { this.showAlert('error', err.message); this.loading.set(false); }
-    });
-  }
-
   // ── Delete ────────────────────────────────────────
   delete(p: FhirPatient, e: Event): void {
     e.stopPropagation();
     if (!confirm(`Delete "${this.svc.getFullName(p)}"?`)) return;
     this.svc.deletePatient(p.id!).subscribe({
-      next:  ()  => { this.showAlert('success', 'Patient deleted.'); this.patients.update(l => l.filter(x => x.id !== p.id)); },
+      next: () => {
+        this.showAlert('success', 'Patient deleted.');
+        this.allPatients.update(l => l.filter(x => x.id !== p.id));
+        this.patients.update(l => l.filter(x => x.id !== p.id));
+        this.totalCount.update(n => n - 1);
+      },
       error: err => this.showAlert('error', err.message)
     });
   }

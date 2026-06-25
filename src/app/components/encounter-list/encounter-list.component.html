@@ -1,0 +1,111 @@
+<div class="el-wrapper">
+  <div class="el-header">
+    <div class="el-title">🏥 Encounters <span class="el-count" *ngIf="encounters().length>0">{{encounters().length}}</span></div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-ghost btn-sm" (click)="load()">↺</button>
+      <button class="btn btn-primary btn-sm" (click)="openNew()">+ New encounter</button>
+    </div>
+  </div>
+
+  <app-alert *ngIf="alert()" [type]="alert()!.type" [message]="alert()!.message" />
+
+  <!-- Form -->
+  <div class="el-form-wrap" *ngIf="showForm()">
+    <div class="el-form-header">
+      <span>{{editId()?'Edit encounter':'New encounter'}}</span>
+      <button class="btn btn-ghost btn-xs" (click)="closeForm()">✕ Close</button>
+    </div>
+    <div class="el-form-body">
+      <form [formGroup]="form" novalidate>
+        <div class="f-row three">
+          <div class="f-group">
+            <label>Status <span class="req">*</span></label>
+            <div class="sw"><select formControlName="status"><option *ngFor="let o of statusOptions" [value]="o.code">{{o.display}}</option></select><span class="sa">▾</span></div>
+          </div>
+          <div class="f-group">
+            <label>Class <span class="req">*</span></label>
+            <div class="sw"><select formControlName="classCode" (change)="onClassChange($any($event.target).value)"><option *ngFor="let o of classOptions" [value]="o.code">{{o.display}}</option></select><span class="sa">▾</span></div>
+          </div>
+          <div class="f-group">
+            <label>Patient ID <span class="req">*</span></label>
+            <div class="ipw" [class.error-wrap]="f['patientReference'].touched&&f['patientReference'].invalid">
+              <span class="ip">Patient/</span><input formControlName="patientReference" type="text" placeholder="16468" />
+            </div>
+            <span class="emsg" *ngIf="f['patientReference'].touched&&f['patientReference'].errors?.['required']">Required.</span>
+          </div>
+        </div>
+        <div class="f-actions">
+          <button type="button" class="btn btn-ghost btn-sm" (click)="toggleJson()">{{showJson()?'Hide JSON':'{ } JSON'}}</button>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="btn btn-outline btn-sm" (click)="closeForm()">Cancel</button>
+            <button type="button" class="btn btn-success btn-sm" (click)="submit()" [disabled]="saving()">
+              <span class="mini-spin" *ngIf="saving()"></span>{{editId()?'Save':'Create encounter'}}
+            </button>
+          </div>
+        </div>
+        <div class="json-preview" *ngIf="showJson()"><pre>{{jsonPreview}}</pre></div>
+        <div class="success-banner" *ngIf="savedId()">
+          <span class="success-check">✓</span>
+          <div><div class="success-title">Encounter saved</div><div class="success-sub">ID: <code>{{savedId()}}</code></div></div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="el-loading" *ngIf="loading()"><div class="el-spinner"></div><span>Loading…</span></div>
+
+  <!-- Empty -->
+  <div class="el-empty" *ngIf="!loading()&&encounters().length===0&&!showForm()">
+    <div style="font-size:30px;margin-bottom:8px;">🏥</div>
+    <p>No encounters found.</p>
+    <button class="btn btn-primary btn-sm" (click)="openNew()">Create first encounter</button>
+  </div>
+
+  <!-- Encounter list -->
+  <div class="el-list" *ngIf="!loading()&&encounters().length>0">
+    <div *ngFor="let e of encounters()">
+      <div class="el-card" [class.el-card-active]="activeEncounter()?.id===e.id">
+
+        <div class="el-card-top">
+          <div class="el-card-left" (click)="openEncounterTabs(e)" style="cursor:pointer;">
+            <div class="el-icon">🏥</div>
+            <div class="el-card-info">
+              <div class="el-id">Encounter / <code>{{e.id}}</code></div>
+              <div class="el-meta">
+                <span class="pill {{statusColor(e.status)}}">{{e.status|titlecase}}</span>
+                <span class="el-class">{{e.class?.display|titlecase}}</span>
+                <span class="el-subject">{{e.subject?.reference}}</span>
+              </div>
+            </div>
+          </div>
+          <div class="el-card-actions">
+            <button class="btn-view btn-xs" [class.btn-view-active]="activeEncounter()?.id===e.id" (click)="openEncounterTabs(e)">
+              {{activeEncounter()?.id===e.id?'▲ Records':'▼ Records'}}
+            </button>
+            <button class="icon-btn" title="Edit" (click)="openEdit(e)">✏️</button>
+            <button class="icon-btn danger" title="Delete" (click)="delete(e)">🗑️</button>
+          </div>
+        </div>
+
+        <!-- ── Inner clinical tabs ── -->
+        <div class="inner-tabs-wrap" *ngIf="activeEncounter()?.id===e.id">
+          <div class="inner-tab-bar">
+            <button class="inner-tab" [class.active]="innerTab()==='observation'"     (click)="innerTab.set('observation')">🩺 Vitals</button>
+            <button class="inner-tab" [class.active]="innerTab()==='condition'"       (click)="innerTab.set('condition')">🩺 Condition</button>
+            <button class="inner-tab" [class.active]="innerTab()==='procedure'"       (click)="innerTab.set('procedure')">🔬 Procedure</button>
+          </div>
+          <div class="inner-tab-content">
+            <app-observation-vitals
+              *ngIf="innerTab()==='observation'"
+              [patientId]="patientId"
+              [encounterId]="e.id!" />
+            <app-condition-list       *ngIf="innerTab()==='condition'"       [patientId]="patientId" />
+            <app-procedure-list       *ngIf="innerTab()==='procedure'"       [patientId]="patientId" />
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

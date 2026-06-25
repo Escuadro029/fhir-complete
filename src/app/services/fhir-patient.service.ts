@@ -17,7 +17,7 @@ const PROV    = 'https://fhir.doh.gov.ph/phcore/StructureDefinition/province';
 export class FhirPatientService {
   private readonly http = inject(HttpClient);
 
-  getPatients(count = 10000): Observable<FhirPatient[]> {
+  getPatients(count = 20): Observable<FhirPatient[]> {
     return this.http.get<FhirBundle>(`${BASE}/Patient?_count=${count}&_sort=-_lastUpdated`, { headers: H }).pipe(
       map(b => (b.entry ?? []).map(e => e.resource)),
       catchError(this.err)

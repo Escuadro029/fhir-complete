@@ -1,0 +1,261 @@
+<div class="ov-wrapper">
+
+  <!-- Header -->
+  <div class="ov-header">
+    <div class="ov-title">
+      🩺 Vital Signs
+      <span class="ov-count" *ngIf="observations().length > 0">{{ observations().length }}</span>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-ghost btn-sm" (click)="load()">↺</button>
+      <button class="btn btn-primary btn-sm" (click)="openForm()">+ Record vitals</button>
+    </div>
+  </div>
+
+  <app-alert *ngIf="alert()" [type]="alert()!.type" [message]="alert()!.message" />
+
+  <!-- ── Input form ── -->
+  <div class="ov-form-wrap" *ngIf="showForm()">
+    <div class="ov-form-header">
+      <span>Record vital signs</span>
+      <button class="btn btn-ghost btn-xs" (click)="closeForm()">✕ Close</button>
+    </div>
+    <div class="ov-form-body">
+      <form [formGroup]="form" novalidate>
+
+        <!-- Meta -->
+        <div class="meta-row">
+          <div class="f-group">
+            <label>Patient ID <span class="req">*</span></label>
+            <div class="ipw" [class.error-wrap]="f['patientReference'].touched && f['patientReference'].invalid">
+              <span class="ip">Patient/</span>
+              <input formControlName="patientReference" type="text" placeholder="20971" />
+            </div>
+          </div>
+          <div class="f-group">
+            <label>Encounter ID</label>
+            <div class="ipw">
+              <span class="ip">Encounter/</span>
+              <input formControlName="encounterReference" type="text" placeholder="21407" />
+            </div>
+          </div>
+          <div class="f-group">
+            <label>Date &amp; time <span class="req">*</span></label>
+            <input formControlName="effectiveDateTime" type="datetime-local"
+              [class.input-error]="f['effectiveDateTime'].touched && f['effectiveDateTime'].invalid" />
+          </div>
+        </div>
+
+        <!-- Vitals grid -->
+        <div class="vitals-grid">
+
+          <!-- ── Blood Pressure ── -->
+          <div class="vital-card" [class.vital-filled]="f['systolic'].value && f['diastolic'].value">
+            <div class="vital-card-header">
+              <span class="vital-icon">🩺</span>
+              <div>
+                <div class="vital-name">Blood Pressure</div>
+                <div class="vital-normal">Normal: 120/80 mmHg</div>
+              </div>
+              <span class="vital-loinc">85354-9</span>
+            </div>
+            <div class="bp-inputs">
+              <div class="bp-field">
+                <label class="bp-label">Systolic</label>
+                <div class="bp-input-wrap">
+                  <input formControlName="systolic" type="number" min="50" max="250" placeholder="120" class="vital-input" />
+                  <span class="vital-unit">mmHg</span>
+                </div>
+              </div>
+              <div class="bp-slash">/</div>
+              <div class="bp-field">
+                <label class="bp-label">Diastolic</label>
+                <div class="bp-input-wrap">
+                  <input formControlName="diastolic" type="number" min="30" max="150" placeholder="80" class="vital-input" />
+                  <span class="vital-unit">mmHg</span>
+                </div>
+              </div>
+            </div>
+            <div class="bp-classify" *ngIf="f['systolic'].value && f['diastolic'].value"
+              [ngClass]="bpClass(f['systolic'].value, f['diastolic'].value)">
+              {{ bpLabel(f['systolic'].value, f['diastolic'].value) }}
+            </div>
+          </div>
+
+          <!-- ── Heart Rate ── -->
+          <div class="vital-card" [class.vital-filled]="f['heartRate'].value">
+            <div class="vital-card-header">
+              <span class="vital-icon">❤️</span>
+              <div>
+                <div class="vital-name">Heart Rate</div>
+                <div class="vital-normal">Normal: 60–100</div>
+              </div>
+              <span class="vital-loinc">8867-4</span>
+            </div>
+            <div class="single-input-wrap">
+              <input formControlName="heartRate" type="number" min="20" max="300" placeholder="72" class="vital-input-lg" />
+              <span class="vital-unit-lg">bpm</span>
+            </div>
+            <div class="vital-classify" *ngIf="f['heartRate'].value" [ngClass]="hrClass(f['heartRate'].value)">
+              {{ f['heartRate'].value > 100 ? 'Tachycardia' : f['heartRate'].value < 60 ? 'Bradycardia' : 'Normal' }}
+            </div>
+          </div>
+
+          <!-- ── Respiratory Rate ── -->
+          <div class="vital-card" [class.vital-filled]="f['respRate'].value">
+            <div class="vital-card-header">
+              <span class="vital-icon">🫁</span>
+              <div>
+                <div class="vital-name">Respiratory Rate</div>
+                <div class="vital-normal">Normal: 12–20</div>
+              </div>
+              <span class="vital-loinc">9279-1</span>
+            </div>
+            <div class="single-input-wrap">
+              <input formControlName="respRate" type="number" min="4" max="60" placeholder="16" class="vital-input-lg" />
+              <span class="vital-unit-lg">br/min</span>
+            </div>
+            <div class="vital-classify" *ngIf="f['respRate'].value"
+              [ngClass]="f['respRate'].value > 20 ? 'vital-high' : f['respRate'].value < 12 ? 'vital-low' : 'vital-normal'">
+              {{ f['respRate'].value > 20 ? 'Tachypnea' : f['respRate'].value < 12 ? 'Bradypnea' : 'Normal' }}
+            </div>
+          </div>
+
+          <!-- ── SpO2 ── -->
+          <div class="vital-card" [class.vital-filled]="f['spo2'].value">
+            <div class="vital-card-header">
+              <span class="vital-icon">💧</span>
+              <div>
+                <div class="vital-name">O₂ Saturation</div>
+                <div class="vital-normal">Normal: 95–100%</div>
+              </div>
+              <span class="vital-loinc">2708-6</span>
+            </div>
+            <div class="single-input-wrap">
+              <input formControlName="spo2" type="number" min="50" max="100" placeholder="98" class="vital-input-lg" />
+              <span class="vital-unit-lg">%</span>
+            </div>
+            <div class="vital-classify" *ngIf="f['spo2'].value" [ngClass]="spo2Class(f['spo2'].value)">
+              {{ f['spo2'].value < 90 ? 'Hypoxia' : f['spo2'].value < 95 ? 'Low' : 'Normal' }}
+            </div>
+          </div>
+
+          <!-- ── Temperature ── -->
+          <div class="vital-card" [class.vital-filled]="f['temp'].value">
+            <div class="vital-card-header">
+              <span class="vital-icon">🌡️</span>
+              <div>
+                <div class="vital-name">Temperature</div>
+                <div class="vital-normal">Normal: 36.1–37.2°C</div>
+              </div>
+              <span class="vital-loinc">8310-5</span>
+            </div>
+            <div class="single-input-wrap">
+              <input formControlName="temp" type="number" min="30" max="45" step="0.1" placeholder="36.8" class="vital-input-lg" />
+              <span class="vital-unit-lg">°C</span>
+            </div>
+            <div class="vital-classify" *ngIf="f['temp'].value" [ngClass]="tempClass(f['temp'].value)">
+              {{ f['temp'].value >= 38.5 ? 'Fever' : f['temp'].value < 35 ? 'Hypothermia' : f['temp'].value >= 37.5 ? 'Low-grade fever' : 'Normal' }}
+            </div>
+          </div>
+
+          <!-- ── Weight ── -->
+          <div class="vital-card" [class.vital-filled]="f['weight'].value">
+            <div class="vital-card-header">
+              <span class="vital-icon">⚖️</span>
+              <div>
+                <div class="vital-name">Body Weight</div>
+                <div class="vital-normal">Unit: kg</div>
+              </div>
+              <span class="vital-loinc">29463-7</span>
+            </div>
+            <div class="single-input-wrap">
+              <input formControlName="weight" type="number" min="0.5" max="500" step="0.1" placeholder="70" class="vital-input-lg" />
+              <span class="vital-unit-lg">kg</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Actions -->
+        <div class="f-actions">
+          <div class="vitals-hint">Fill in any vitals to record — empty fields will be skipped.</div>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="btn btn-outline btn-sm" (click)="closeForm()">Cancel</button>
+            <button type="button" class="btn btn-success btn-sm" (click)="submit()" [disabled]="saving()">
+              <span class="mini-spin" *ngIf="saving()"></span>
+              {{ saving() ? 'Saving…' : 'Save vitals' }}
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="ov-loading" *ngIf="loading()">
+    <div class="ov-spinner"></div><span>Loading observations…</span>
+  </div>
+
+  <!-- Empty -->
+  <div class="ov-empty" *ngIf="!loading() && observations().length === 0 && !showForm()">
+    <div style="font-size:30px;margin-bottom:8px;">📊</div>
+    <p>No vital signs recorded.</p>
+    <button class="btn btn-primary btn-sm" (click)="openForm()">Record first vitals</button>
+  </div>
+
+  <!-- Observations list -->
+  <div class="ov-list" *ngIf="!loading() && observations().length > 0">
+    <div class="ov-row" *ngFor="let obs of observations()">
+
+      <div class="ov-row-left">
+        <!-- Vital type icon + label -->
+        <div class="ov-type-badge" [class]="'type-' + getVitalType(obs)">
+          {{ getConfig(getVitalType(obs))?.icon ?? '📊' }}
+        </div>
+        <div class="ov-row-info">
+          <div class="ov-row-name">{{ obs.code?.coding?.[0]?.display }}</div>
+          <div class="ov-row-time">{{ obs.effectiveDateTime | date:'medium' }}</div>
+          <div class="ov-row-ref">{{ obs.subject?.reference }}
+            <span *ngIf="obs.encounter?.reference"> · {{ obs.encounter!.reference }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ov-row-value">
+        <!-- BP display -->
+        <ng-container *ngIf="getVitalType(obs) === 'bp'">
+          <div class="bp-value-display" [ngClass]="bpClass(getSystolic(obs), getDiastolic(obs))">
+            <span class="bpv-sys">{{ getSystolic(obs) }}</span>
+            <span class="bpv-sep">/</span>
+            <span class="bpv-dia">{{ getDiastolic(obs) }}</span>
+            <span class="bpv-unit">mmHg</span>
+          </div>
+          <div class="bp-label-sm" [ngClass]="bpClass(getSystolic(obs), getDiastolic(obs))">
+            {{ bpLabel(getSystolic(obs), getDiastolic(obs)) }}
+          </div>
+        </ng-container>
+
+        <!-- Single value display -->
+        <ng-container *ngIf="getVitalType(obs) !== 'bp'">
+          <div class="single-value-display"
+            [ngClass]="getVitalType(obs) === 'hr'   ? hrClass(getValue(obs))   :
+                       getVitalType(obs) === 'spo2' ? spo2Class(getValue(obs)) :
+                       getVitalType(obs) === 'temp' ? tempClass(getValue(obs)) : ''">
+            <span class="sv-num">{{ getValue(obs) }}</span>
+            <span class="sv-unit">{{ getUnit(obs) }}</span>
+          </div>
+        </ng-container>
+      </div>
+
+      <div class="ov-row-actions">
+        <span class="pill pill-final" *ngIf="obs.status==='final'">Final</span>
+        <span class="pill pill-prelim" *ngIf="obs.status!=='final'">{{ obs.status }}</span>
+        <button class="icon-btn danger" title="Delete" (click)="delete(obs)">🗑️</button>
+      </div>
+
+    </div>
+  </div>
+
+</div>

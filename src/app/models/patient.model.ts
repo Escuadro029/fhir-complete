@@ -54,3 +54,11 @@ export const EMPTY_FORM: PatientFormModel = {
   barangayCode: '', barangayDisplay: '', cityMunCode: '', cityMunDisplay: '',
   provinceCode: '', provinceDisplay: ''
 };
+
+// In patient.model.ts — update FhirBundle
+export interface FhirBundle {
+  resourceType: 'Bundle';
+  total?: number;
+  link?: { relation: string; url: string }[];
+  entry?: { resource: FhirPatient }[];
+}
