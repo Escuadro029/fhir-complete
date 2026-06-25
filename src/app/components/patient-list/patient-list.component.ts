@@ -253,7 +253,7 @@ export class PatientListComponent implements OnInit {
   search(): void {
     if (!this.searchQuery.trim()) { this.load(); return; }
     this.loading.set(true);
-    this.svc.getPatients(50).subscribe({
+    this.svc.getPatients(100000).subscribe({
       next: list => {
         const q = this.searchQuery.toLowerCase();
         this.patients.set(list.filter(p =>
