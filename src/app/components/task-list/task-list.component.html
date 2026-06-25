@@ -3,233 +3,206 @@
   <!-- Header -->
   <div class="tl-header">
     <div class="tl-title">
-      📋 Tasks
-      <span class="tl-count" *ngIf="tasks().length > 0">{{ tasks().length }}</span>
+      📋 Service Requests
+      <span class="tl-count" *ngIf="requests().length > 0">{{ requests().length }}</span>
     </div>
-    <div class="tl-header-actions">
-      <button class="btn btn-ghost" (click)="load()">↺ Refresh</button>
-      <button class="btn btn-primary" (click)="openNew()">+ New task</button>
-    </div>
+    <button class="btn btn-ghost" (click)="load()">↺ Refresh</button>
   </div>
 
   <app-alert *ngIf="alert()" [type]="alert()!.type" [message]="alert()!.message" />
 
-  <!-- Inline form -->
-  <div class="tl-form-wrap" *ngIf="showForm()">
-    <div class="tl-form-header">
-      <span>{{ editId() ? 'Edit task' : 'New task' }}</span>
-      <button class="btn btn-ghost" (click)="closeForm()">✕ Close</button>
-    </div>
-
-    <div class="tl-form-body">
-      <form [formGroup]="form" novalidate>
-
-        <!-- Status & intent -->
-        <div class="f-section">Task details</div>
-        <div class="f-row three">
-          <div class="f-group">
-            <label>Status <span class="req">*</span></label>
-            <div class="sw">
-              <select formControlName="status">
-                <option *ngFor="let o of statusOptions" [value]="o.code">{{ o.display }}</option>
-              </select>
-              <span class="sa">▾</span>
-            </div>
-          </div>
-          <div class="f-group">
-            <label>Intent <span class="req">*</span></label>
-            <div class="sw">
-              <select formControlName="intent">
-                <option *ngFor="let o of intentOptions" [value]="o.code">{{ o.display }}</option>
-              </select>
-              <span class="sa">▾</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Code -->
-        <div class="f-row">
-          <div class="f-group">
-            <label>Code (SNOMED)</label>
-            <input formControlName="codeCode" type="text" placeholder="e.g. 3457005" />
-          </div>
-          <div class="f-group">
-            <label>Code display</label>
-            <input formControlName="codeDisplay" type="text" placeholder="e.g. Patient referral" />
-          </div>
-        </div>
-        <div class="f-row">
-          <div class="f-group full">
-            <label>Code text <span class="req">*</span></label>
-            <input formControlName="codeText" type="text"
-              placeholder="e.g. eReferral for severe pre-eclampsia management"
-              [class.input-error]="f['codeText'].touched && f['codeText'].invalid" />
-            <span class="emsg" *ngIf="f['codeText'].touched && f['codeText'].errors?.['required']">Required.</span>
-          </div>
-        </div>
-
-        <!-- References -->
-        <div class="f-section">References</div>
-        <div class="f-row three">
-          <div class="f-group">
-            <label>Focus (ServiceRequest) <span class="req">*</span></label>
-            <div class="ipw" [class.error-wrap]="f['focusReference'].touched && f['focusReference'].invalid">
-              <span class="ip">ServiceRequest/</span>
-              <input formControlName="focusReference" type="text" placeholder="18142" />
-            </div>
-            <span class="emsg" *ngIf="f['focusReference'].touched && f['focusReference'].errors?.['required']">Required.</span>
-          </div>
-          <div class="f-group">
-            <label>For (Patient) <span class="req">*</span></label>
-            <div class="ipw" [class.error-wrap]="f['forReference'].touched && f['forReference'].invalid">
-              <span class="ip">Patient/</span>
-              <input formControlName="forReference" type="text" placeholder="16468" />
-            </div>
-            <span class="emsg" *ngIf="f['forReference'].touched && f['forReference'].errors?.['required']">Required.</span>
-          </div>
-        </div>
-        <div class="f-row">
-          <div class="f-group">
-            <label>Requester (Practitioner) <span class="req">*</span></label>
-            <div class="ipw" [class.error-wrap]="f['requesterReference'].touched && f['requesterReference'].invalid">
-              <span class="ip">Practitioner/</span>
-              <input formControlName="requesterReference" type="text" placeholder="16171" />
-            </div>
-            <span class="emsg" *ngIf="f['requesterReference'].touched && f['requesterReference'].errors?.['required']">Required.</span>
-          </div>
-          <div class="f-group">
-            <label>Owner (Practitioner)</label>
-            <div class="ipw">
-              <span class="ip">Practitioner/</span>
-              <input formControlName="ownerReference" type="text" placeholder="18117" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Dates -->
-        <div class="f-section">Dates</div>
-        <div class="f-row">
-          <div class="f-group">
-            <label>Authored on <span class="req">*</span></label>
-            <input formControlName="authoredOn" type="datetime-local"
-              [class.input-error]="f['authoredOn'].touched && f['authoredOn'].invalid" />
-            <span class="emsg" *ngIf="f['authoredOn'].touched && f['authoredOn'].errors?.['required']">Required.</span>
-          </div>
-          <div class="f-group">
-            <label>Last modified</label>
-            <input formControlName="lastModified" type="datetime-local" />
-          </div>
-        </div>
-
-        <!-- Note -->
-        <div class="f-section">Note</div>
-        <div class="f-row">
-          <div class="f-group full">
-            <label>Note</label>
-            <textarea formControlName="noteText" rows="3"
-              placeholder="e.g. New referral for patient management"></textarea>
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="f-actions">
-          <button type="button" class="btn btn-ghost" (click)="toggleJson()">
-            {{ showJson() ? 'Hide FHIR JSON' : 'Preview FHIR JSON' }}
-          </button>
-          <div style="display:flex;gap:8px;">
-            <button type="button" class="btn btn-outline" (click)="closeForm()">Cancel</button>
-            <button type="button" class="btn btn-success" (click)="submit()" [disabled]="saving()">
-              <span class="spin-sm" *ngIf="saving()"></span>
-              {{ editId() ? 'Save changes' : 'Create task' }}
-            </button>
-          </div>
-        </div>
-
-        <!-- JSON preview -->
-        <div class="json-preview" *ngIf="showJson()">
-          <pre>{{ jsonPreview }}</pre>
-        </div>
-
-        <!-- Success -->
-        <div class="success-banner" *ngIf="savedId()">
-          <span class="success-check">✓</span>
-          <div>
-            <div class="success-title">Task saved</div>
-            <div class="success-sub">FHIR ID: <code>{{ savedId() }}</code></div>
-          </div>
-          <button class="btn btn-outline" (click)="openNew()">New task</button>
-        </div>
-
-      </form>
-    </div>
-  </div>
-
   <!-- Loading -->
   <div class="tl-loading" *ngIf="loading()">
     <div class="tl-spinner"></div>
-    <span>Loading tasks…</span>
+    <span>Loading service requests…</span>
   </div>
 
   <!-- Empty -->
-  <div class="tl-empty" *ngIf="!loading() && tasks().length === 0 && !showForm()">
-    <div class="tl-empty-icon">📋</div>
-    <p>No tasks for this patient.</p>
-    <button class="btn btn-primary" (click)="openNew()">Create first task</button>
+  <div class="tl-empty" *ngIf="!loading() && requests().length === 0">
+    <div class="tl-empty-icon">📄</div>
+    <p>No service requests found for this patient.</p>
   </div>
 
-  <!-- Task cards -->
-  <div class="tl-list" *ngIf="!loading() && tasks().length > 0">
-    <div class="tl-card" *ngFor="let t of tasks()">
+  <!-- SR cards -->
+  <div class="tl-list" *ngIf="!loading() && requests().length > 0">
+    <div class="tl-card" *ngFor="let sr of requests()"
+      [class.card-active]="sr.status === 'active'"
+      [class.card-hold]="sr.status === 'on-hold'"
+      [class.card-completed]="sr.status === 'completed'">
 
+      <!-- Card top -->
       <div class="tl-card-top">
         <div class="tl-card-left">
-          <div class="tl-code-badge">{{ t.code?.coding?.[0]?.code ?? '—' }}</div>
+          <div class="tl-ref-badge">
+            {{ sr.requisition?.value ?? 'No REF#' }}
+          </div>
           <div class="tl-card-info">
-            <div class="tl-name">{{ t.code?.text }}</div>
-            <div class="tl-display">{{ t.code?.coding?.[0]?.display }}</div>
+            <div class="tl-name">{{ sr.category?.[0]?.text ?? 'Service Request' }}</div>
+            <div class="tl-sub">{{ sr.subject?.reference }}</div>
           </div>
         </div>
-        <div class="tl-card-right">
-          <span class="pill" [ngClass]="statusColor(t.status)">{{ t.status | titlecase }}</span>
-          <span class="pill pill-intent">{{ t.intent | titlecase }}</span>
-          <button class="icon-btn" title="Edit"   (click)="openEdit(t)">✏️</button>
-          <button class="icon-btn icon-btn-danger" title="Delete" (click)="delete(t)">🗑️</button>
-        </div>
+
+        <!-- Status pill -->
+        <span class="pill" [ngClass]="statusColor(sr.status)">
+          {{ statusDisplay(sr.status) }}
+        </span>
       </div>
 
+      <!-- Meta -->
       <div class="tl-meta">
-        <div class="tl-meta-item" *ngIf="t.focus?.reference">
-          <span class="tl-meta-label">Focus</span>
-          <span class="tl-meta-value">{{ t.focus.reference }}</span>
-        </div>
-        <div class="tl-meta-item" *ngIf="t.for?.reference">
-          <span class="tl-meta-label">For</span>
-          <span class="tl-meta-value">{{ t.for.reference }}</span>
-        </div>
-        <div class="tl-meta-item" *ngIf="t.requester?.reference">
-          <span class="tl-meta-label">Requester</span>
-          <span class="tl-meta-value">{{ t.requester.reference }}</span>
-        </div>
-        <div class="tl-meta-item" *ngIf="t.owner?.reference">
-          <span class="tl-meta-label">Owner</span>
-          <span class="tl-meta-value">{{ t.owner.reference }}</span>
-        </div>
-        <div class="tl-meta-item" *ngIf="t.authoredOn">
+        <div class="tl-meta-item" *ngIf="sr.authoredOn">
           <span class="tl-meta-label">Authored</span>
-          <span class="tl-meta-value">{{ t.authoredOn | date:'medium' }}</span>
+          <span class="tl-meta-value">{{ sr.authoredOn | date:'medium' }}</span>
         </div>
-        <div class="tl-meta-item" *ngIf="t.lastModified">
-          <span class="tl-meta-label">Modified</span>
-          <span class="tl-meta-value">{{ t.lastModified | date:'medium' }}</span>
+        <div class="tl-meta-item" *ngIf="sr.occurrenceDateTime">
+          <span class="tl-meta-label">Occurrence</span>
+          <span class="tl-meta-value">{{ sr.occurrenceDateTime | date:'medium' }}</span>
+        </div>
+        <div class="tl-meta-item" *ngIf="sr.requester?.reference">
+          <span class="tl-meta-label">Requester</span>
+          <span class="tl-meta-value">{{ sr.requester!.reference }}</span>
+        </div>
+        <div class="tl-meta-item" *ngIf="sr.performer?.[0]?.reference">
+          <span class="tl-meta-label">Performer</span>
+          <span class="tl-meta-value">{{ sr.performer![0].reference }}</span>
+        </div>
+        <div class="tl-meta-item" *ngIf="sr.encounter?.reference">
+          <span class="tl-meta-label">Encounter</span>
+          <span class="tl-meta-value">{{ sr.encounter!.reference }}</span>
+        </div>
+        <div class="tl-meta-item" *ngIf="sr.intent">
+          <span class="tl-meta-label">Intent</span>
+          <span class="tl-meta-value">{{ sr.intent | titlecase }}</span>
         </div>
       </div>
 
-      <div class="tl-note" *ngIf="t.note?.[0]?.text">
-        <span class="tl-note-label">Note</span>
-        <p class="tl-note-text">{{ t.note[0].text }}</p>
+      <!-- Reason -->
+      <div class="tl-reason" *ngIf="sr.reasonCode?.[0]?.text">
+        <span class="tl-sub-label">Reason</span>
+        <p class="tl-sub-text">{{ sr.reasonCode![0].text }}</p>
+      </div>
+
+      <!-- Notes -->
+      <div class="tl-notes" *ngIf="sr.note && sr.note.length > 0">
+        <span class="tl-sub-label">Notes</span>
+        <p class="tl-sub-text" *ngFor="let n of sr.note">{{ n.text }}</p>
+      </div>
+
+      <!-- ── Status actions ── -->
+      <div class="tl-actions">
+
+        <!-- Accept button — shown when requested/draft/on-hold -->
+        <button class="btn-accept"
+          *ngIf="sr.status === 'active' ? false : sr.status !== 'completed'"
+          [disabled]="isUpdating(sr.id)"
+          (click)="accept(sr)">
+          <span class="mini-spin" *ngIf="isUpdating(sr.id)"></span>
+          ✓ Accept
+        </button>
+
+        <!-- Defer button — shown when not on-hold or completed -->
+        <button class="btn-defer"
+          *ngIf="sr.status !== 'on-hold' && sr.status !== 'completed'"
+          [disabled]="isUpdating(sr.id)"
+          (click)="openDeferModal(sr)">
+          ⏸ Defer
+        </button>
+
+        <!-- Re-accept button — shown when on-hold -->
+        <button class="btn-accept btn-sm"
+          *ngIf="sr.status === 'on-hold'"
+          [disabled]="isUpdating(sr.id)"
+          (click)="accept(sr)">
+          ↩ Re-accept
+        </button>
+
+        <!-- Status dropdown — change to any status -->
+        <div class="status-select-wrap">
+          <label class="status-select-label">Change status</label>
+          <div class="sw">
+            <select
+              [value]="sr.status"
+              (change)="onStatusChange(sr, $any($event.target).value)"
+              [disabled]="isUpdating(sr.id)"
+              class="status-select">
+              <option *ngFor="let o of statusOptions" [value]="o.code">
+                {{ o.display }}
+              </option>
+            </select>
+            <span class="sa">▾</span>
+          </div>
+        </div>
+
+        <!-- Updating spinner -->
+        <div class="updating-wrap" *ngIf="isUpdating(sr.id)">
+          <div class="mini-spinner"></div>
+          <span>Updating…</span>
+        </div>
+
       </div>
 
     </div>
   </div>
+</div>
 
+<!-- ── Defer modal ── -->
+<div class="modal-backdrop" *ngIf="showDeferModal()" (click)="closeDeferModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div class="modal-title">⏸ Defer service request</div>
+      <button class="modal-close" (click)="closeDeferModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="modal-desc">
+        Select a reason. Status will be set to <strong>on-hold</strong>
+        and the reason appended to notes.
+      </p>
+
+      <!-- SR details -->
+      <div class="sr-detail-box" *ngIf="deferSR()">
+        <div class="sr-detail-row">
+          <span class="sr-detail-label">Requisition</span>
+          <span class="sr-detail-value">{{ deferSR()!.requisition?.value ?? '—' }}</span>
+        </div>
+        <div class="sr-detail-row">
+          <span class="sr-detail-label">Category</span>
+          <span class="sr-detail-value">{{ deferSR()!.category?.[0]?.text ?? '—' }}</span>
+        </div>
+        <div class="sr-detail-row">
+          <span class="sr-detail-label">Current status</span>
+          <span class="sr-detail-value">{{ deferSR()!.status }}</span>
+        </div>
+      </div>
+
+      <!-- Reason options -->
+      <div class="reason-options">
+        <label class="reason-option"
+          *ngFor="let r of deferReasons"
+          [class.selected]="deferReason() === r">
+          <input type="radio" name="deferReason" [value]="r"
+            (change)="deferReason.set(r); deferReasonError.set('')" />
+          <span>{{ r }}</span>
+        </label>
+      </div>
+
+      <!-- Custom reason -->
+      <div class="custom-reason" *ngIf="deferReason() === 'Other'">
+        <label>Specify reason <span style="color:#D85A30">*</span></label>
+        <textarea rows="3" placeholder="Enter reason…"
+          [(ngModel)]="customReason"></textarea>
+      </div>
+
+      <div class="reason-error" *ngIf="deferReasonError()">
+        {{ deferReasonError() }}
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" (click)="closeDeferModal()">Cancel</button>
+      <button class="btn-defer-confirm" (click)="confirmDefer()">Confirm deferral</button>
+    </div>
+
+  </div>
 </div>

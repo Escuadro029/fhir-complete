@@ -1,146 +1,194 @@
 import { Component, OnInit, inject, signal, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl } from '@angular/forms';
-import {
-  FhirTaskService,
-  TASK_STATUS_OPTIONS,
-  TASK_INTENT_OPTIONS
-} from '../../services/fhir-task.service';
-import { FhirTask } from '../../models/task.model';
-import { EMPTY_TASK_FORM } from '../../models/task.model';
+import { FormsModule } from '@angular/forms';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AlertComponent } from '../shared/alert.component';
+
+interface FhirServiceRequest {
+  id?: string;
+  resourceType: string;
+  status: string;
+  intent: string;
+  subject: { reference: string };
+  requester?: { reference: string };
+  performer?: { reference: string }[];
+  encounter?: { reference: string };
+  category?: { coding: any[]; text: string }[];
+  reasonCode?: { coding: any[]; text: string }[];
+  note?: { text: string }[];
+  authoredOn?: string;
+  occurrenceDateTime?: string;
+  requisition?: { system: string; value: string };
+}
 
 @Component({
   selector: 'app-task-list',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, AlertComponent],
+  imports: [CommonModule, FormsModule, AlertComponent],
   templateUrl: './task-list.component.html',
   styleUrls: ['./task-list.component.css']
 })
 export class TaskListComponent implements OnInit {
-  private readonly fb  = inject(FormBuilder);
-  private readonly svc = inject(FhirTaskService);
+  private readonly http = inject(HttpClient);
+
+  private readonly BASE = 'https://cdr.pheref.fhirlab.net/fhir';
+  private readonly H = new HttpHeaders({
+    'Content-Type': 'application/fhir+json',
+    'Accept': 'application/fhir+json'
+  });
 
   @Input() patientId: string = '';
 
-  tasks       = signal<FhirTask[]>([]);
-  loading     = signal(false);
-  saving      = signal(false);
-  showForm    = signal(false);
-  editId      = signal<string | null>(null);
-  savedId     = signal<string | null>(null);
-  alert       = signal<{ type: 'success' | 'error'; message: string } | null>(null);
-  showJson    = signal(false);
+  requests = signal<FhirServiceRequest[]>([]);
+  loading = signal(false);
+  updating = signal<Record<string, boolean>>({});
+  alert = signal<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  readonly statusOptions = TASK_STATUS_OPTIONS;
-  readonly intentOptions = TASK_INTENT_OPTIONS;
+  // Defer modal
+  showDeferModal = signal(false);
+  deferSR = signal<FhirServiceRequest | null>(null);
+  deferReason = signal('');
+  deferReasonError = signal('');
+  customReason = '';
 
-  form = this.fb.group({
-    status:             ['requested',    Validators.required],
-    intent:             ['order',        Validators.required],
-    codeCode:           ['3457005'],
-    codeDisplay:        ['Patient referral'],
-    codeText:           ['',             Validators.required],
-    focusReference:     ['',             Validators.required],
-    forReference:       ['',             Validators.required],
-    authoredOn:         ['',             Validators.required],
-    lastModified:       [''],
-    requesterReference: ['',             Validators.required],
-    ownerReference:     [''],
-    noteText:           ['']
-  });
+  readonly deferReasons = [
+    'No available bed / slot',
+    'Incomplete referral documents',
+    'Patient condition not stable for transfer',
+    'Facility not equipped for this case',
+    'Referred to another facility',
+    'Other'
+  ];
 
-  get f(): { [k: string]: AbstractControl } { return this.form.controls; }
+  readonly statusOptions = [
+    { code: 'draft', display: 'Draft', color: 'pill-draft' },
+    { code: 'active', display: 'Active', color: 'pill-active' },
+    { code: 'on-hold', display: 'On Hold', color: 'pill-hold' },
+    { code: 'revoked', display: 'Revoked', color: 'pill-revoked' },
+    { code: 'completed', display: 'Completed', color: 'pill-completed' },
+    { code: 'entered-in-error', display: 'Entered in Error', color: 'pill-error' },
+    { code: 'unknown', display: 'Unknown', color: 'pill-draft' }
+  ];
 
-  get jsonPreview(): string {
-    return JSON.stringify(
-      this.svc.toFhir(this.form.getRawValue() as any, this.editId() ?? undefined),
-      null, 2
-    );
-  }
-
-  ngOnInit(): void {
-    this.load();
-    if (this.patientId) this.form.patchValue({ forReference: this.patientId });
-  }
+  ngOnInit(): void { this.load(); }
 
   load(): void {
     if (!this.patientId) return;
     this.loading.set(true);
-    this.svc.getByPatient(this.patientId).subscribe({
+    this.http.get<any>(
+      `${this.BASE}/ServiceRequest?subject=Patient/${this.patientId}&_sort=-authored&_count=20`,
+      { headers: this.H }
+    ).subscribe({
       next: bundle => {
-        this.tasks.set((bundle.entry ?? []).map((e: any) => e.resource as FhirTask));
+        const list = (bundle.entry ?? []).map((e: any) => e.resource as FhirServiceRequest);
+        this.requests.set(list);
         this.loading.set(false);
       },
-      error: err => { this.showAlert('error', err.message); this.loading.set(false); }
+      error: err => {
+        this.showAlert('error', 'Failed to load: ' + err.message);
+        this.loading.set(false);
+      }
     });
   }
 
-  openNew(): void {
-    this.editId.set(null);
-    this.form.reset(EMPTY_TASK_FORM as any);
-    this.form.patchValue({ forReference: this.patientId });
-    this.savedId.set(null);
-    this.showJson.set(false);
-    this.showForm.set(true);
+  // ── Quick status change from dropdown ────────────
+  onStatusChange(sr: FhirServiceRequest, newStatus: string): void {
+    if (newStatus === sr.status) return;
+
+    if (newStatus === 'on-hold') {
+      this.deferSR.set(sr);
+      this.deferReason.set('');
+      this.deferReasonError.set('');
+      this.customReason = '';
+      this.showDeferModal.set(true);
+      return;
+    }
+
+    this.updateStatus(sr, newStatus);
   }
 
-  openEdit(t: FhirTask): void {
-    this.editId.set(t.id ?? null);
-    this.form.patchValue(this.svc.fromFhir(t) as any);
-    this.savedId.set(null);
-    this.showJson.set(false);
-    this.showForm.set(true);
+  // ── Accept shortcut ───────────────────────────────
+  accept(sr: FhirServiceRequest): void {
+    this.updateStatus(sr, 'active');
   }
 
-  closeForm(): void {
-    this.showForm.set(false);
-    this.editId.set(null);
-    this.load();
+  // ── Defer via modal ───────────────────────────────
+  openDeferModal(sr: FhirServiceRequest): void {
+    this.deferSR.set(sr);
+    this.deferReason.set('');
+    this.deferReasonError.set('');
+    this.customReason = '';
+    this.showDeferModal.set(true);
   }
 
-  submit(): void {
-    if (this.form.invalid) { this.form.markAllAsTouched(); return; }
-    this.saving.set(true);
-    const req$ = this.editId()
-      ? this.svc.update(this.editId()!, this.form.getRawValue() as any)
-      : this.svc.create(this.form.getRawValue() as any);
-    req$.subscribe({
-      next:  r   => {
-        this.savedId.set(r.id ?? null);
-        this.showAlert('success', `Task saved · ID: ${r.id}`);
-        this.saving.set(false);
-        this.load();
+  confirmDefer(): void {
+    const reason = this.deferReason() === 'Other'
+      ? this.customReason.trim()
+      : this.deferReason();
+
+    if (!reason) {
+      this.deferReasonError.set('Please select or enter a reason.');
+      return;
+    }
+
+    const sr = this.deferSR();
+    if (!sr) return;
+
+    const updated: FhirServiceRequest = {
+      ...sr,
+      status: 'on-hold',
+      note: [...(sr.note ?? []), { text: `Deferred: ${reason}` }]
+    };
+
+    this.putSR(updated, `Referral deferred · ${reason}`);
+    this.closeDeferModal();
+  }
+
+  closeDeferModal(): void {
+    this.showDeferModal.set(false);
+    this.deferSR.set(null);
+    this.deferReason.set('');
+    this.deferReasonError.set('');
+    this.customReason = '';
+  }
+
+  // ── Core PUT ──────────────────────────────────────
+  private updateStatus(sr: FhirServiceRequest, status: string): void {
+    this.putSR({ ...sr, status }, `Status updated to "${status}"`);
+  }
+
+  private putSR(sr: FhirServiceRequest, successMsg: string): void {
+    if (!sr.id) return;
+    this.updating.update(u => ({ ...u, [sr.id!]: true }));
+    this.http.put<FhirServiceRequest>(
+      `${this.BASE}/ServiceRequest/${sr.id}`,
+      sr,
+      { headers: this.H }
+    ).subscribe({
+      next: result => {
+        this.requests.update(list =>
+          list.map(r => r.id === result.id ? result : r)
+        );
+        this.showAlert('success', successMsg);
+        this.updating.update(u => ({ ...u, [sr.id!]: false }));
       },
-      error: err => { this.showAlert('error', err.message); this.saving.set(false); }
+      error: err => {
+        this.showAlert('error', 'Update failed: ' + err.message);
+        this.updating.update(u => ({ ...u, [sr.id!]: false }));
+      }
     });
   }
 
-  delete(t: FhirTask): void {
-    if (!confirm(`Delete task "${t.code?.text}"?`)) return;
-    this.svc.delete(t.id!).subscribe({
-      next:  ()  => { this.showAlert('success', 'Task deleted.'); this.load(); },
-      error: err => this.showAlert('error', err.message)
-    });
+  isUpdating(id?: string): boolean {
+    return id ? (this.updating()[id] ?? false) : false;
   }
-
-  toggleJson(): void { this.showJson.update(v => !v); }
 
   statusColor(code: string): string {
-    const map: Record<string, string> = {
-      requested:   'pill-requested',
-      accepted:    'pill-accepted',
-      completed:   'pill-completed',
-      'in-progress':'pill-progress',
-      rejected:    'pill-rejected',
-      cancelled:   'pill-cancelled',
-      draft:       'pill-draft'
-    };
-    return map[code] ?? 'pill-draft';
+    return this.statusOptions.find(o => o.code === code)?.color ?? 'pill-draft';
   }
 
-  labelFor(field: string, opts: { code: string; display: string }[]): string {
-    return opts.find(o => o.code === this.form.get(field)?.value)?.display ?? '';
+  statusDisplay(code: string): string {
+    return this.statusOptions.find(o => o.code === code)?.display ?? code;
   }
 
   private showAlert(type: 'success' | 'error', message: string): void {
