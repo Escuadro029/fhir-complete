@@ -159,25 +159,25 @@
       </div>
 
       <!-- Province standalone + auto-filled city -->
-      <div class="frow" style="margin-top:8px;">
-        <div class="fg">
-          <label>Province (all PH) <span class="loading-dot" *ngIf="loadingProvinces()">…</span></label>
-          <div class="sw">
-            <select (change)="onProvinceDropdown($any($event.target).value)" [disabled]="loadingProvinces()">
-              <option value="">— Select province —</option>
-              <option *ngFor="let p of provinces()" [value]="p.name"
-                [selected]="form.get('district')?.value === p.name">{{ p.name }}</option>
-            </select>
-            <span class="sa">▾</span>
+        <!--<div class="frow" style="margin-top:8px;">
+          <div class="fg">
+            <label>Province (all PH) <span class="loading-dot" *ngIf="loadingProvinces()">…</span></label>
+            <div class="sw">
+              <select (change)="onProvinceDropdown($any($event.target).value)" [disabled]="loadingProvinces()">
+                <option value="">— Select province —</option>
+                <option *ngFor="let p of provinces()" [value]="p.name"
+                  [selected]="form.get('district')?.value === p.name">{{ p.name }}</option>
+              </select>
+              <span class="sa">▾</span>
+            </div>
+          </div>
+          <div class="fg" *ngIf="form.get('city')?.value">
+            <label>City / Municipality (auto-filled)</label>
+            <input formControlName="city" type="text" readonly class="readonly" />
           </div>
         </div>
-        <div class="fg" *ngIf="form.get('city')?.value">
-          <label>City / Municipality (auto-filled)</label>
-          <input formControlName="city" type="text" readonly class="readonly" />
-        </div>
-      </div>
-
-      <!-- PSGC codes preview -->
+        -->
+        <!-- PSGC codes preview -->
       <div class="psgc-preview" *ngIf="selProv || selCity || selBrgy">
         <span class="psgc-preview-label">PSGC codes:</span>
         <span class="psgc-chip" *ngIf="selProv">{{ selProv }}</span>

@@ -67,7 +67,7 @@ export class PatientFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadingProvinces.set(true);
-    this.psgcSvc.getAllProvinces().subscribe(d => { this.provinces.set(d); this.loadingProvinces.set(false); });
+    this.psgcSvc.getRegions().subscribe(d => { this.provinces.set(d); this.loadingProvinces.set(false); });
     this.loadingR.set(true);
     this.psgcSvc.getRegions().subscribe(d => { this.regions.set(d); this.loadingR.set(false); });
     const id = this.route.snapshot.paramMap.get('id');
